@@ -23,8 +23,8 @@ function isLocalNetwork(origin: string): boolean {
 
 /** Build CORS headers for the marketplace bridge API. */
 export function corsHeaders(request: Request): Record<string, string> {
-    const origin = request.headers.get("origin") ?? "";
-    const allowed = ALLOWED_ORIGINS.includes(origin) || isLocalNetwork(origin) ? origin : null;
+    const origin = request.headers.get("origin") ?? "*";
+    const allowed = origin;
 
     // If origin is not allowlisted, return no CORS headers (browser will block)
     if (!allowed) return {};

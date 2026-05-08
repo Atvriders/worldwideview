@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
+          { key: "Access-Control-Allow-Headers", value: "*" },
+          { key: "Access-Control-Allow-Private-Network", value: "true" },
           {
             key: "Content-Security-Policy",
             value: [
