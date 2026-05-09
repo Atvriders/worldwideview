@@ -44,7 +44,7 @@ RUN node scripts/copy-cesium.mjs
 FROM node:22-alpine AS runner
 WORKDIR /app
 
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl sqlite
 
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
@@ -70,6 +70,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/scripts/https-proxy.mjs ./scripts/https-proxy.mjs
+COPY --from=builder /app/scripts/migrate-sqlite-to-postgres.mjs ./scripts/migrate-sqlite-to-postgres.mjs
 
 # Entrypoint: migrate DB on first run, then start server
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
