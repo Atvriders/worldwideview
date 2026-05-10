@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Header } from "./Header";
 import { LayerPanel } from "@/components/panels/LayerPanel";
 import { EntityInfoCard } from "@/components/panels/EntityInfoCard";
@@ -42,7 +42,8 @@ export function AppShell() {
     const boot = useBootSequence();
     const isMobile = useIsMobile();
     const bootStartRef = useRef(Date.now());
-    const { needsReload, pendingUnverified, approveSelected, denyAll } = useMarketplaceSync();
+    const [hostReady, setHostReady] = useState(false);
+    const { needsReload, pendingUnverified, approveSelected, denyAll } = useMarketplaceSync(hostReady);
 
     useEffect(() => {
         const startPlatform = async () => {
@@ -51,6 +52,7 @@ export function AppShell() {
 
             // Inject host libraries for dynamic plugin loading
             await injectHostGlobals();
+            setHostReady(true);
 
             // Fetch disabled built-in plugins before registration
             let disabledIds = new Set<string>();

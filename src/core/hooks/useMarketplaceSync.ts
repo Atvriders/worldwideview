@@ -16,7 +16,7 @@ import { isDemo } from "@/core/edition";
  * - Detects built-in plugin changes that require a reload.
  * - Gates unverified plugins behind user approval (batch dialog).
  */
-export function useMarketplaceSync() {
+export function useMarketplaceSync(hostReady: boolean) {
     const initLayer = useStore((s) => s.initLayer);
     const loadedIds = useRef<Set<string>>(new Set());
     const initialDisabledIds = useRef<Set<string> | null>(null);
@@ -171,19 +171,21 @@ export function useMarketplaceSync() {
     }, []);
 
     const syncPlugins = useCallback(async () => {
+        if (!hostReady) return;
         await captureInitialDisabled();
         await syncMarketplacePlugins();
         await checkBuiltinChanges();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [initLayer]);
+    }, [initLayer, hostReady]);
 
     useEffect(() => {
+        if (!hostReady) return;
         syncPlugins();
 
         const handleFocus = () => { syncPlugins(); };
         window.addEventListener("focus", handleFocus);
         return () => window.removeEventListener("focus", handleFocus);
-    }, [syncPlugins]);
+    }, [syncPlugins, hostReady]);
 
     return { syncPlugins, needsReload, pendingUnverified, approveSelected, denyAll };
 }
