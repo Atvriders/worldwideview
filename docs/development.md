@@ -14,6 +14,7 @@ Development on WorldWideView prioritizes modularity, high performance, and stric
 - **Global Styles:** Located at `src/app/globals.css`.
 - **Component Styles:** Use CSS Modules (`.module.css`) or co-locate `.css` files directly next to their components.
 - **HUD Animations:** Specialized interface animations are stored in `src/styles/hud-animations.css`.
+- **Color Theming & Design Tokens:** Defined in `src/styles/theme-tokens.css` via CSS variables (e.g., `[data-theme='black']`).
 
 ### Import Aliases
 - Application core: `@/*` → `./src/*`

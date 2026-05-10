@@ -100,3 +100,7 @@ packages/wwv-data-engine/
 /public/cesium/
 build_output*.log
 build_output*.txt
+
+# Seeder repositories
+/local-seeders/
+/.local-seeders-dist/

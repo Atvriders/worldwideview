@@ -18,7 +18,7 @@ The core value proposition of WorldWideView is mapping diverse, decoupled intell
 - **State Management:** Zustand — `src/core/state/` (slice-based store)
 - **Event Bus:** Custom typed `DataBus` — `src/core/data/DataBus.ts`
 - **Database:** PostgreSQL via Prisma 7 — `prisma/schema.prisma`
-- **Styling:** Vanilla CSS (no Tailwind) — `src/app/globals.css`
+- **Styling:** Vanilla CSS (no Tailwind) — `src/app/globals.css` and `src/styles/theme-tokens.css`
 
 ## Platform Support
 Built as a highly portable Next.js container, it supports multiple deployment profiles controlled by `NEXT_PUBLIC_WWV_EDITION` (default: `local`).
