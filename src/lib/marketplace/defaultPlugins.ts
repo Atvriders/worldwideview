@@ -20,4 +20,5 @@ export const DEFAULT_PLUGIN_IDS = [
     "conflict-zones",
     "volcanoes",
     "airports",
+    "international-sanctions",
 ] as const;
