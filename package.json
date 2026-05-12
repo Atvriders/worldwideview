@@ -1,6 +1,6 @@
 {
   "name": "worldwideview",
-  "version": "2.7.11",
+  "version": "2.7.12",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@9.15.4",
@@ -83,7 +83,8 @@
       "prisma",
       "protobufjs",
       "sharp",
-      "esbuild"
+      "esbuild",
+      "better-sqlite3"
     ]
   },
   "engines": {
