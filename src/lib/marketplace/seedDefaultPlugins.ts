@@ -1,32 +1,20 @@
-import { prisma } from "../db";
-import { isDemo } from "@/core/edition";
+import { prisma } from "@/lib/db";
 import { DEFAULT_PLUGIN_IDS } from "./defaultPlugins";
+import { getVerifiedPluginIds } from "./registryClient";
 import { upsertPlugin } from "./repository";
 import { validateManifest } from "@/core/plugins/validateManifest";
-import { getVerifiedPluginIds } from "./registryClient";
+import { PluginManifest } from "@worldwideview/wwv-plugin-sdk";
 
-const MARKETPLACE_URL =
-    process.env.NEXT_PUBLIC_MARKETPLACE_URL ||
-    "https://marketplace.worldwideview.dev";
+const MARKETPLACE_URL = process.env.NEXT_PUBLIC_MARKETPLACE_URL;
 
 /**
- * Seed default marketplace plugins on a fresh install.
- *
- * Runs once per instance lifecycle — an idempotent guard
- * (`defaults_seeded` in the Setting table) prevents re-runs.
- *
- * Like the "sample data" that ships with a new app: the seeder
- * writes records to the database on first boot, then never runs again.
- *
- * Errors are logged but never thrown — a failed seed must never
- * block the application from starting.
+ * Seeds default verified plugins into the local database on first run.
+ * This ensures common layers like ISS, Aircraft, and Maritime are available immediately.
+ * 
+ * @returns {Promise<void>}
  */
 export async function seedDefaultPlugins(): Promise<void> {
     try {
-        // Demo has its own mechanism (NEXT_PUBLIC_DEMO_DEFAULT_PLUGINS)
-        if (isDemo) return;
-
-        // Opt-out for power users deploying fresh instances
         if (process.env.WWV_SKIP_DEFAULT_PLUGINS === "true") {
             await markSeeded();
             return;
@@ -39,8 +27,8 @@ export async function seedDefaultPlugins(): Promise<void> {
         if (guard) return;
 
         // Not truly fresh if plugins already exist
-        const existing = await prisma.installedPlugin.count();
-        if (existing > 0) {
+        const count = await prisma.installedPlugin.count();
+        if (count > 0) {
             await markSeeded();
             return;
         }
@@ -50,24 +38,18 @@ export async function seedDefaultPlugins(): Promise<void> {
         );
 
         const verified = await getVerifiedPluginIds();
-        let installed = 0;
 
         for (const pluginId of DEFAULT_PLUGIN_IDS) {
             try {
+                if (!pluginId) continue;
+
+                if (!verified.has(pluginId)) {
+                    // Only seed official verified plugins by default
+                    continue;
+                }
+
                 const manifest = await fetchManifest(pluginId);
                 if (!manifest) continue;
-
-                // Server-side trust stamping
-                manifest.trust = verified.has(pluginId)
-                    ? "verified"
-                    : "unverified";
-
-                // Reconstruct CDN entry for npm-distributed plugins
-                if (manifest.npmPackage) {
-                    const ver = manifest.version || "1.0.0";
-                    manifest.format = "bundle";
-                    manifest.entry = `https://unpkg.com/${manifest.npmPackage}@${ver}/dist/frontend.mjs`;
-                }
 
                 const validation = validateManifest(manifest);
                 if (!validation.valid) {
@@ -77,65 +59,46 @@ export async function seedDefaultPlugins(): Promise<void> {
                     continue;
                 }
 
+                // Correct signature: id, version, config
                 await upsertPlugin(
-                    pluginId,
-                    manifest.version || "1.0.0",
-                    JSON.stringify(manifest),
+                    pluginId, 
+                    manifest.version || "1.0.0", 
+                    JSON.stringify(manifest)
                 );
-                installed++;
             } catch (err) {
-                console.warn(
-                    `[DefaultPlugins] Failed to seed ${pluginId}:`,
-                    err,
-                );
+                console.warn(`[DefaultPlugins] Failed to seed ${pluginId}:`, err);
             }
         }
 
         await markSeeded();
-        console.log(
-            `[DefaultPlugins] Seeded ${installed}/${DEFAULT_PLUGIN_IDS.length} plugins`,
-        );
-    } catch (err) {
-        console.error("[DefaultPlugins] Seeder failed:", err);
-        // Never throw — seeding failure must not block the app
+        console.log("[DefaultPlugins] Successfully seeded default plugins.");
+    } catch (error) {
+        console.error("[DefaultPlugins] Fatal error during seeding:", error);
     }
 }
 
-/** Fetch a plugin manifest from the marketplace API. */
-async function fetchManifest(
-    pluginId: string,
-): Promise<Record<string, any> | null> {
+/**
+ * Records that the seeding process has completed.
+ */
+async function markSeeded() {
+    await prisma.setting.upsert({
+        where: { key: "defaults_seeded" },
+        update: { value: "true" },
+        create: { key: "defaults_seeded", value: "true" },
+    });
+}
+
+/**
+ * Fetches a plugin manifest from the official marketplace.
+ */
+async function fetchManifest(pluginId: string): Promise<PluginManifest> {
     try {
         const res = await fetch(`${MARKETPLACE_URL}/api/plugins/${pluginId}`);
         if (!res.ok) {
-            console.warn(
-                `[DefaultPlugins] Marketplace returned ${res.status} for ${pluginId}`,
-            );
-            return null;
+            throw new Error(`Failed to fetch manifest for ${pluginId}: ${res.statusText}`);
         }
-        const data = await res.json();
-        if (!data.id) data.id = pluginId;
-        return data;
+        return await res.json();
     } catch (err) {
-        console.warn(
-            `[DefaultPlugins] Network error fetching ${pluginId}:`,
-            err,
-        );
-        return null;
-    }
-}
-
-/** Write the idempotent guard row. */
-async function markSeeded(): Promise<void> {
-    const existing = await prisma.setting.findFirst({ where: { key: "defaults_seeded" } });
-    if (existing) {
-        await prisma.setting.updateMany({
-            where: { key: "defaults_seeded" },
-            data: { value: "true" },
-        });
-    } else {
-        await prisma.setting.create({
-            data: { key: "defaults_seeded", value: "true" },
-        });
+        throw err;
     }
 }
