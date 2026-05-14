@@ -10,7 +10,24 @@ vi.mock("openid-client", () => ({
     discoveryRequest: vi.fn(),
     processAuthorizationResponse: vi.fn(),
     validateAuthResponse: vi.fn(),
-    processAuthCodeResponse: vi.fn()
+    authorizationCodeGrant: vi.fn().mockResolvedValue({ access_token: "mock-token" })
+}));
+
+vi.mock("@/lib/auth/encryption", () => ({
+    encryptCredential: vi.fn().mockResolvedValue({
+        version: 1,
+        salt: "mock-salt",
+        nonce: "mock-nonce",
+        ciphertext: "mock-ciphertext"
+    })
+}));
+
+vi.mock("@/lib/db", () => ({
+    prisma: {
+        marketplaceCredential: {
+            upsert: vi.fn().mockResolvedValue({})
+        }
+    }
 }));
 
 describe("PKCE Flow", () => {
