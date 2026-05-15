@@ -7,7 +7,7 @@
  */
 
 import concurrently from 'concurrently';
-import kill from 'tree-kill';
+import kill from 'tree-kill/index.js';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import process from 'process';
@@ -40,7 +40,7 @@ const teardownDbOnExit = process.env.WWV_TEARDOWN_DB_ON_EXIT === 'true' || proce
 const { result, commands } = concurrently(
   [
     { command: 'pnpm run dev:plugins', name: 'plugins', prefixColor: 'magenta' },
-    { command: 'next dev', name: 'next', prefixColor: 'blue' }
+    { command: 'pnpm exec next dev', name: 'next', prefixColor: 'blue' }
   ],
   {
     prefix: 'name',

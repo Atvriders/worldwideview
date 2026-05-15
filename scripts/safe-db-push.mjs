@@ -1,6 +1,13 @@
 import { execSync } from 'child_process';
 
 const dbUrl = process.env.DATABASE_URL || '';
+
+if (!dbUrl) {
+  console.error("❌ ERROR: DATABASE_URL is missing.");
+  console.error("   Did you forget to run 'pnpm run setup' to generate your .env file?");
+  process.exit(1);
+}
+
 const isLocal = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1') || dbUrl.includes('host.docker.internal') || dbUrl.includes('postgres:postgres@db:5432');
 
 if (!isLocal) {
