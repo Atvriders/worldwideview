@@ -3,8 +3,7 @@ import {
 } from "react";
 import { normalizeToGeoJson, type NormalizeResult, type ConvertOptions } from "@/lib/geojson";
 
-import { pluginManager } from "@/core/plugins/PluginManager";
-import { pluginRegistry } from "@/core/plugins/PluginRegistry";
+import { dataBus } from "@/core/data/DataBus";
 import { trackEvent } from "@/lib/analytics";
 import { useGeoJsonStore } from "./geojsonStore";
 import { createGeoJsonPlugin, pickLayerColor } from "./GeoJsonImporterPlugin";
@@ -73,7 +72,7 @@ export function useGeoJsonImport(onClose: () => void) {
             featureCollection: preview.collection,
         });
 
-        // 2. Register dynamic plugin
+        // 2. Register dynamic plugin via DataBus
         const plugin = createGeoJsonPlugin({
             id: layerId,
             name: layerName,
@@ -82,10 +81,7 @@ export function useGeoJsonImport(onClose: () => void) {
             featureCollection: preview.collection,
         });
 
-        pluginRegistry.register(plugin);
-        await pluginManager.registerPlugin(plugin);
-        // 3. Auto-enable
-        pluginManager.enablePlugin(plugin.id);
+        dataBus.emit("dynamicPluginCreate", { plugin, autoEnable: true });
 
         trackEvent("geojson-import", { featureCount: preview.collection.features.length });
         onClose();

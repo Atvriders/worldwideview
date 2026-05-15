@@ -24,6 +24,8 @@ export function DataBusSubscriber() {
     const setPollingInterval = useStore((s) => s.setPollingInterval);
     const setEntities = useStore((s) => s.setEntities);
     const setEntityCount = useStore((s) => s.setEntityCount);
+    const clearEntities = useStore((s) => s.clearEntities);
+    const removeLayer = useStore((s) => s.removeLayer);
     const cacheMaxAge = useStore((s) => s.dataConfig.cacheMaxAge);
 
     useEffect(() => {
@@ -65,12 +67,20 @@ export function DataBusSubscriber() {
             }
         });
 
+        const unsubUnreg = dataBus.on("pluginUnregistered", ({ pluginId }) => {
+            setTimeout(() => {
+                clearEntities(pluginId);
+                removeLayer(pluginId);
+            }, 0);
+        });
+
         return () => {
             unsubReg();
+            unsubUnreg();
             unsubData();
             unsubToggle();
         };
-    }, [setPollingInterval, setEntities, setEntityCount]);
+    }, [setPollingInterval, setEntities, setEntityCount, clearEntities, removeLayer]);
 
     return null;
 }

@@ -13,6 +13,7 @@ import { useStore } from "@/core/state/store";
 import { trackEvent } from "@/lib/analytics";
 import { resolveEngineUrl } from "@/core/data/resolveEngineUrl";
 import { fetchLocalEngineManifest } from "@/core/data/engineManifest";
+import { pluginRegistry } from "@/core/plugins/PluginRegistry";
 
 /**
  * ManagedPlugin represents the internal state and instance of a registered data source.
@@ -48,6 +49,26 @@ class PluginManager {
     async init(): Promise<void> {
         if (this.initialized) return;
         await cacheLayer.init();
+
+        dataBus.on("dynamicPluginCreate", async ({ plugin, autoEnable }) => {
+            try {
+                await this.registerPlugin(plugin);
+                pluginRegistry.register(plugin);
+                if (autoEnable) {
+                    this.enablePlugin(plugin.id);
+                }
+            } catch (err) {
+                console.error(`[PluginManager] Failed to create dynamic plugin ${plugin.id}:`, err);
+                const toastStr = `Failed to load ${plugin.metadata.name}`;
+                useStore.getState().addToast({ title: "Import Error", description: toastStr, type: "error" });
+            }
+        });
+
+        dataBus.on("dynamicPluginRemove", ({ pluginId }) => {
+            this.unregisterPlugin(pluginId);
+            pluginRegistry.unregister(pluginId);
+        });
+
         this.initialized = true;
     }
 

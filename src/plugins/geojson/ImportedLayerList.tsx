@@ -1,8 +1,7 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-import { pluginManager } from "@/core/plugins/PluginManager";
-import { pluginRegistry } from "@/core/plugins/PluginRegistry";
+import { dataBus } from "@/core/data/DataBus";
 import { useGeoJsonStore } from "./geojsonStore";
 
 export function ImportedLayerList() {
@@ -10,9 +9,8 @@ export function ImportedLayerList() {
     const removeLayer = useGeoJsonStore((s) => s.removeImportedLayer);
 
     const handleDelete = (layerId: string) => {
-        // Disable and unregister the dynamically created plugin
-        pluginManager.disablePlugin(layerId);
-        pluginRegistry.unregister(layerId);
+        // Unregister the dynamically created plugin via DataBus
+        dataBus.emit("dynamicPluginRemove", { pluginId: layerId });
         removeLayer(layerId);
     };
 
