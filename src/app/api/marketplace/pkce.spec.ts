@@ -28,7 +28,6 @@ vi.mock("@/lib/db", () => ({
             upsert: vi.fn().mockResolvedValue({})
         }
     }
->>>>>>> origin/main
 }));
 
 describe("PKCE Flow", () => {

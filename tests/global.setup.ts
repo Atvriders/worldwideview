@@ -9,7 +9,29 @@ import path from 'path';
 
 export const TEST_USER_EMAIL = 'playwright-test@worldwideview.local';
 
+function loadEnv() {
+  try {
+    const envPath = path.resolve(process.cwd(), '.env');
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8');
+      content.split('\n').forEach(line => {
+        const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+        if (match) {
+          const key = match[1];
+          let value = match[2] || '';
+          if (value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
+          if (value.startsWith("'") && value.endsWith("'")) value = value.slice(1, -1);
+          process.env[key] = value;
+        }
+      });
+    }
+  } catch (e) {
+    // Ignore read errors
+  }
+}
+
 async function globalSetup(config: FullConfig) {
+  loadEnv();
   const { storageState, baseURL } = config.projects[0].use;
   
   if (!baseURL) {
