@@ -1,6 +1,6 @@
 /**
  * @file configSlice.ts
- * @description State slice managing application-wide settings, data engine configuration, 
+ * @description State slice managing application-wide settings, data engine configuration,
  * and map rendering parameters.
  */
 
@@ -61,6 +61,8 @@ export interface MapConfig {
     fallbackLayerId: string | null;
     /** The active scene mode (2D, 2.5D, or 3D). */
     sceneMode: 1 | 2 | 3;
+    /** Whether OSM 3D Buildings are shown on non-Google imagery layers. */
+    showOsmBuildings: boolean;
 }
 
 /**
@@ -108,20 +110,18 @@ export const createConfigSlice: StateCreator<AppStore, [], [], ConfigSlice> = (s
         baseLayerId: (typeof window !== "undefined" && window.localStorage && typeof window.localStorage.getItem === "function") ? (localStorage.getItem("wwv_map_layer") || "google-3d") : "google-3d",
         fallbackLayerId: null,
         sceneMode: 3,
+        showOsmBuildings: true,
     },
-    updateDataConfig: (config) =>
-        set((state) => ({
+    updateDataConfig: (config) => set((state) => ({
             dataConfig: { ...state.dataConfig, ...config },
         })),
-    updateMapConfig: (config) =>
-        set((state) => {
+    updateMapConfig: (config) => set((state) => {
             if (config.baseLayerId && typeof window !== "undefined" && window.localStorage && typeof window.localStorage.setItem === "function") {
                 localStorage.setItem("wwv_map_layer", config.baseLayerId);
             }
             return { mapConfig: { ...state.mapConfig, ...config } };
         }),
-    setPollingInterval: (pluginId, intervalMs) =>
-        set((state) => ({
+    setPollingInterval: (pluginId, intervalMs) => set((state) => ({
             dataConfig: {
                 ...state.dataConfig,
                 pollingIntervals: {
@@ -130,8 +130,7 @@ export const createConfigSlice: StateCreator<AppStore, [], [], ConfigSlice> = (s
                 },
             },
         })),
-    updatePluginSettings: (pluginId, settings) =>
-        set((state) => ({
+    updatePluginSettings: (pluginId, settings) => set((state) => ({
             dataConfig: {
                 ...state.dataConfig,
                 pluginSettings: {
