@@ -103,8 +103,14 @@ class PluginManager {
         // the bundler doesn't expose every NEXT_PUBLIC_ key on the runtime
         // object. Add explicit static references so the values reach plugin
         // contexts. Add new known keys here as they're introduced.
+        // Format the raw engine URL to ensure it uses http/https for initial fetch calls
+        const rawEngineUrl = process.env.NEXT_PUBLIC_WWV_PLUGIN_DATA_ENGINE_URL;
+        const httpEngineUrl = rawEngineUrl 
+            ? rawEngineUrl.replace(/\/stream$/, "").replace(/^ws:\/\//, "http://").replace(/^wss:\/\//, "https://") 
+            : undefined;
+
         const explicitVars: Record<string, string | undefined> = {
-            DATA_ENGINE_URL: process.env.NEXT_PUBLIC_WWV_PLUGIN_DATA_ENGINE_URL,
+            DATA_ENGINE_URL: httpEngineUrl,
         };
         for (const [k, v] of Object.entries(explicitVars)) {
             if (v && !envVars[k]) envVars[k] = v;
