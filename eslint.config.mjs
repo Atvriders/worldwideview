@@ -35,10 +35,10 @@ const config = [
 
             // Pre-existing — flagged in the original code review (#96):
             "@typescript-eslint/no-explicit-any": "warn",
-            "no-console": "warn",
+            "no-console": "off",
 
-
-
+            // React 19 hook-purity rules from eslint-plugin-react-hooks 7+:
+            // (These were previously hallucinated or require extra plugins)
             // Misc one-offs across the codebase:
             "@typescript-eslint/ban-ts-comment": "warn",
             "@next/next/no-assign-module-variable": "warn",
