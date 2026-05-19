@@ -41,6 +41,11 @@ jobs:
         pnpm run predev
 
     - name: Run Playwright tests
+      env:
+        # Prevent Firefox from loading the AT-SPI/MSAA accessibility bridge on
+        # Linux CI — without this, Firefox hangs for ~20 min waiting for a bus
+        # that doesn't exist on ubuntu-latest runners.
+        NO_AT_BRIDGE: ${{ matrix.browser == 'firefox' && '1' || '0' }}
       run: pnpm test:e2e --project=${{ matrix.browser }}
       
     - uses: actions/upload-artifact@v4
