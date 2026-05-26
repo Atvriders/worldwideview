@@ -173,7 +173,7 @@ label: label || "Camera Stream",
             return (
               <iframe
                 src={embedUrl}
-                sandbox={isProxiedIframe ? "allow-scripts allow-popups allow-presentation" : undefined}
+                sandbox={isProxiedIframe ? "allow-scripts allow-presentation" : undefined}
                 style={{
  position: "absolute", inset: 0, width: "100%", height: "100%", border: "none"
 }}
