@@ -23,6 +23,9 @@ node_modules/
 /.agents/context/
 /.agents/settings.local.json
 
+# planning (private repo: github.com/silvertakana/wwv-planning)
+.planning/
+
 # performance
 /performance/
 
@@ -66,6 +69,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env
 .env.local
+.env.test
 
 # vercel
 .vercel

@@ -38,14 +38,19 @@ describe("SSRF Protection Utility", () => {
     });
 
     describe("validateOrigin", () => {
-        it("should allow valid https origins", () => {
+        it("should allow https origins", () => {
             expect(validateOrigin("https://api.github.com/v1")).toBe(true);
         });
 
-        it("should reject non-https protocols", () => {
-            expect(validateOrigin("http://api.github.com")).toBe(false);
+        it("should allow http origins (StreamProxy fetches HTTP camera feeds server-side)", () => {
+            expect(validateOrigin("http://camera.example.com/stream")).toBe(true);
+        });
+
+        it("should reject dangerous non-web protocols", () => {
             expect(validateOrigin("ftp://api.github.com")).toBe(false);
             expect(validateOrigin("file:///etc/passwd")).toBe(false);
+            expect(validateOrigin("data:text/html,<h1>xss</h1>")).toBe(false);
+            expect(validateOrigin("javascript:alert(1)")).toBe(false);
         });
     });
 
@@ -99,6 +104,19 @@ describe("SSRF Protection Utility", () => {
             await expect(safeFetch("https://169.254.169.254/latest/meta-data")).rejects.toThrow(/SSRF/);
         });
 
+        it("should reject dangerous protocols (ftp, file, etc.)", async () => {
+            await expect(safeFetch("ftp://camera.example.com/stream")).rejects.toThrow(/SSRF.*protocol/i);
+            await expect(safeFetch("file:///etc/passwd")).rejects.toThrow(/SSRF.*protocol/i);
+        });
+
+        it("should accept HTTP URLs (StreamProxy use case — camera feeds)", async () => {
+            mockDnsLookup.mockResolvedValue({ address: PUBLIC_IP, family: 4 });
+            mockUndiciF.mockResolvedValueOnce(new Response("stream-data", { status: 200 }));
+
+            const response = await safeFetch("http://camera.example.com/stream");
+            expect(response.status).toBe(200);
+        });
+
         it("enforces maxSize — responses exceeding the limit error on body read", async () => {
             mockDnsLookup.mockResolvedValue({ address: PUBLIC_IP, family: 4 });
             const oversized = new Uint8Array(11); // 11 bytes > 10-byte limit
@@ -116,7 +134,7 @@ describe("SSRF Protection Utility", () => {
 
         it("uses undici dispatcher pinned to the resolved IP and does not follow redirects", async () => {
             mockDnsLookup.mockResolvedValue({ address: PUBLIC_IP, family: 4 });
-            // safeFetch uses redirect:"manual" — this 301 must not be followed
+            // safeFetch uses redirect:"manual" -- this 301 must not be followed
             mockUndiciF.mockResolvedValueOnce(
                 new Response(null, { status: 301, headers: { Location: "https://evil-rebind.example.com" } })
             );
