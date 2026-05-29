@@ -31,11 +31,29 @@ If any are missing, ask the user or tell them to run plugin-researcher first.
 From the project root (`C:\dev\wwv\worldwideview`):
 
 ```bash
-node packages/wwv-cli/dist/index.js create <name> --local
+# Build the CLI first if dist/ is missing (dist is gitignored; fresh worktrees lack it):
+#   pnpm --filter @worldwideview/wwv-cli build
+#
+# The CLI accepts flags for every prompt. Pass them all + --yes for a fully
+# non-interactive scaffold (omit any flag to be prompted for just that value):
+node packages/wwv-cli/dist/index.js create <name> \
+  --display-name "<Display Name>" \
+  --description "<short description>" \
+  --category <aviation|maritime|space|weather|custom> \
+  --architecture <polling|websocket> \
+  --seeder-tier <community|private> \
+  --render-style <billboard|model|point> \
+  --yes
 pnpm install
 ```
 
-This creates `local-plugins/wwv-plugin-<name>/`. Verify it exists before proceeding.
+This creates `local-plugins/wwv-plugin-<name>/`. With `--architecture websocket` it also
+creates the seeder at `local-seeders/<tier>/packages/<name>/` (correct community/private
+layout: `package.json` + `tsup.config.ts` + `src/index.ts`). Verify both exist before proceeding.
+
+> The CLI scaffolds the seeder into `local-seeders/<tier>/packages/<name>/` already —
+> no post-CLI move is required. (Older CLI versions dropped a bare `seeder.mjs` at
+> `local-seeders/<tier>/<name>/`; if you ever see that, the CLI is out of date — rebuild it.)
 
 **NEVER:**
 - Scaffold manually (always use the CLI)
