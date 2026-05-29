@@ -34,6 +34,8 @@ import { useSatelliteFrustum } from "./hooks/useSatelliteFrustum";
 import { useTrailRendering } from "./hooks/useTrailRendering";
 import { useViewerInitialization } from "./hooks/useViewerInitialization";
 import { usePersistentDataSync } from "./hooks/usePersistentDataSync";
+import { useSessionId } from "./hooks/useSessionId";
+import { useGlobeStateSync } from "./hooks/useGlobeStateSync";
 
 /** Stable references */
 const CONTEXT_OPTIONS = { requestWebgl2: true, webgl: { antialias: true } } as const;
@@ -120,6 +122,8 @@ enableLighting,
 
     useSelectionAnchor(viewerRef.current, viewerReady, selectedEntity, lockedEntityId, selectionEntityRef, animatablesMapRef);
     useCameraSync(viewerRef.current, viewerReady, setCameraPosition, setFps);
+    const sessionId = useSessionId();
+    useGlobeStateSync(sessionId);
     useCameraActions(viewerRef.current, viewerReady);
     useEntityRendering(viewerRef.current, viewerReady, visibleEntities, animatablesMapRef, hoveredEntityIdRef, sceneSettings);
     useModelRendering(viewerRef.current, viewerReady, animatablesMapRef);

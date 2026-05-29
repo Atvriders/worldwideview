@@ -38,10 +38,22 @@ vi.mock("@/core/edition", () => ({
 // handleRequest returns a minimal streaming Response so the happy-path tests
 // can assert gate passage without a real transport.
 vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => {
-    const McpServer = vi.fn().mockImplementation(() => ({
-        connect: vi.fn().mockResolvedValue(undefined),
-    }));
-    return { McpServer };
+    // Use a stable factory so vi.resetAllMocks() does not wipe the constructor
+    // implementation — resetAllMocks resets call history but the factory closure
+    // keeps re-creating a fresh instance object on each `new McpServer()` call.
+    const McpServer = vi.fn(function McpServerMock(this: unknown) {
+        return {
+            connect: vi.fn().mockResolvedValue(undefined),
+            registerResource: vi.fn(),
+            registerTool: vi.fn(),
+        };
+    });
+    // Minimal ResourceTemplate stub so globeResources.ts can construct one
+    // without the mock throwing "No export defined".
+    const ResourceTemplate = vi.fn(function ResourceTemplateMock(this: unknown, uriTemplate: string) {
+        return { uriTemplate };
+    });
+    return { McpServer, ResourceTemplate };
 });
 
 vi.mock("@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js", () => {

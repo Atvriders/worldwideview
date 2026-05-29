@@ -31,6 +31,8 @@ import { isDemo } from "@/core/edition";
 import { authenticateApiKey } from "@/lib/apiKeyAuth";
 import { createMcpServer } from "@/lib/mcp/server";
 import { mcpLimiter, getClientIp } from "@/lib/rateLimiters";
+import { registerGlobeResources } from "./globeResources";
+import { registerDataQueryTools } from "@/lib/mcp/tools";
 
 // ---------------------------------------------------------------------------
 // JSON-RPC 2.0 error response helpers
@@ -128,11 +130,11 @@ async function handleMcpRequest(request: Request): Promise<Response> {
     // ------------------------------------------------------------------
     const server = createMcpServer();
 
-    // Phase 18-21 registration seam: append registrar calls here, e.g.:
-    //   registerGlobeResources(server, { userId: authResult.userId });
-    //   registerGlobeCommandTools(server, { userId: authResult.userId });
-    //   registerDataQueryTools(server, { userId: authResult.userId });
-    // Each executor reads the latest route.ts before editing (R-1).
+    // Registration seam (RECONCILIATION R-1):
+    // Phase 19: registerGlobeCommandTools(server, { userId: authResult.userId });
+    // Phase 21: dynamic per-plugin tools
+    registerGlobeResources(server, { userId: authResult.userId });
+    registerDataQueryTools(server);
 
     const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined, // stateless mode (D-17-04)
