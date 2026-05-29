@@ -9,7 +9,7 @@ const program = new Command();
 program
   .name('wwv')
   .description('WorldWideView Plugin CLI')
-  .version('1.1.2');
+  .version('1.3.0');
 
 program.addCommand(createCommand);
 program.addCommand(publishCommand);
