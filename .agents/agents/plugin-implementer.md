@@ -28,32 +28,55 @@ If any are missing, ask the user or tell them to run plugin-researcher first.
 
 ## Phase 2 — Scaffold
 
-From the project root (`C:\dev\wwv\worldwideview`):
+Always scaffold with the CLI, never by hand. From the project root (`C:\dev\wwv\worldwideview`).
+
+**Step 1 — build the CLI if `dist/` is missing** (`dist` is gitignored, so fresh worktrees lack it):
 
 ```bash
-# Build the CLI first if dist/ is missing (dist is gitignored; fresh worktrees lack it):
-#   pnpm --filter @worldwideview/wwv-cli build
-#
-# The CLI accepts flags for every prompt. Pass them all + --yes for a fully
-# non-interactive scaffold (omit any flag to be prompted for just that value):
+pnpm --filter @worldwideview/wwv-cli build
+```
+
+**Step 2 — run `create` non-interactively.** The CLI accepts a flag for every prompt;
+pass them all plus `--yes` so it never blocks on a prompt. Use the variant that matches
+the architecture — `--seeder-tier` is **websocket-only** (passing it with `polling` does
+nothing). Requires `@worldwideview/wwv-cli` **≥ 1.3.1** (earlier versions wrongly demanded
+`--seeder-tier` for polling under `--yes`).
+
+```bash
+# Polling / static (frontend only — NO seeder, so NO --seeder-tier):
 node packages/wwv-cli/dist/index.js create <name> \
   --display-name "<Display Name>" \
   --description "<short description>" \
   --category <aviation|maritime|space|weather|custom> \
-  --architecture <polling|websocket> \
+  --architecture polling \
+  --render-style <billboard|model|point> \
+  --yes
+
+# Real-time / WebSocket (also scaffolds a backend seeder — REQUIRES --seeder-tier):
+node packages/wwv-cli/dist/index.js create <name> \
+  --display-name "<Display Name>" \
+  --description "<short description>" \
+  --category <aviation|maritime|space|weather|custom> \
+  --architecture websocket \
   --seeder-tier <community|private> \
   --render-style <billboard|model|point> \
   --yes
+
 pnpm install
 ```
 
-This creates `local-plugins/wwv-plugin-<name>/`. With `--architecture websocket` it also
-creates the seeder at `local-seeders/<tier>/packages/<name>/` (correct community/private
-layout: `package.json` + `tsup.config.ts` + `src/index.ts`). Verify both exist before proceeding.
+This creates `local-plugins/wwv-plugin-<name>/`. The `websocket` variant also creates the
+seeder at `local-seeders/<tier>/packages/<name>/` in the correct community/private layout
+(`package.json` + `tsup.config.ts` + `src/index.ts`, exporting `{ name, cron, fn }` with
+`name` === the plugin id). Verify the expected directories exist before proceeding.
 
-> The CLI scaffolds the seeder into `local-seeders/<tier>/packages/<name>/` already —
-> no post-CLI move is required. (Older CLI versions dropped a bare `seeder.mjs` at
-> `local-seeders/<tier>/<name>/`; if you ever see that, the CLI is out of date — rebuild it.)
+> No post-CLI move is required — the CLI already targets `local-seeders/<tier>/packages/<name>/`.
+> (Pre-1.3.0 CLI dropped a bare `seeder.mjs` at `local-seeders/<tier>/<name>/`; if you ever see
+> that shape, the CLI is stale — rebuild it with the Step 1 command.)
+>
+> The CLI exits non-zero with a clear message on a bad `--category`/`--architecture`/etc., a
+> missing required value under `--yes`, or an existing target directory. Treat a non-zero exit
+> as a hard stop — fix the inputs and re-run; do not fall back to manual scaffolding.
 
 **NEVER:**
 - Scaffold manually (always use the CLI)
@@ -134,13 +157,15 @@ export class MyPlugin implements WorldPlugin {
 
 ---
 
-## Phase 4 — Implement the Seeder (skip for static plugins)
+## Phase 4 — Implement the Seeder (skip for static / polling-only plugins)
 
-Seeders live in `local-seeders/community/` — **this is an independent git repo** (`github.com/silvertakana/wwv-seeders`). Never commit seeder files to the worldwideview repo.
+Seeders live in `local-seeders/<tier>/` — **independent git repos** (`github.com/silvertakana/wwv-seeders` for community, `wwv-seeders-private` for private). Never commit seeder files to the worldwideview repo.
 
-### Create `local-seeders/community/packages/<name>/`
+If you scaffolded with `--architecture websocket`, **the CLI already created the seeder skeleton** at `local-seeders/<tier>/packages/<name>/` (`package.json` + `tsup.config.ts` + `src/index.ts` with a `{ name, cron, fn }` stub). Do **not** recreate those files — open the generated `src/index.ts` and replace the stub body with real fetch + map logic. The snippets below are the target shapes the CLI emits; use them to verify/adjust what was generated, not to create files from scratch.
 
-**`package.json`:**
+### Generated layout: `local-seeders/<tier>/packages/<name>/`
+
+**`package.json`** (CLI-generated — only adjust `dependencies` for what your seeder imports):
 ```json
 {
   "name": "@wwv-seeders/<name>",
