@@ -14,6 +14,7 @@ import {
     KeyRound, Plus, Trash2, AlertTriangle, Loader,
 } from "lucide-react";
 import { sectionHeaderStyle } from "../panels/DataConfig/sharedStyles";
+import { ConnectAgentHelper } from "./ConnectAgentHelper";
 
 type KeyRecord = {
     id: string;
@@ -347,7 +348,7 @@ export function PersonalApiKeysSection() {
           </div>
         )}
 
-        {/* TODO Phase 17: "Connect your agent" helper goes here */}
+        <ConnectAgentHelper token={revealToken} />
       </div>
     );
 }
