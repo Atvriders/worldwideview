@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: full-mcp-support
 status: active
-last_updated: "2026-05-30T12:12:00.000Z"
+last_updated: "2026-05-30T12:26:01.000Z"
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 20
-  completed_plans: 10
-  percent: 29
+  completed_plans: 12
+  percent: 32
 ---
 
 # Project State
@@ -84,6 +84,9 @@ Version 2.27.0.
   user later requests. The risky boot-path change is parked here.
 
 **Phase 21:** IN PROGRESS. Re-planned as v3 frontend-relay (21-REPLAN.md, decisions locked 2026-05-30).
+
+- **21-02 (Wave 1, SDK):** COMPLETE (2026-05-30, commit bda235f). McpToolDeclaration (NO execution field), mcpTools? + mcpCapabilities? in PluginManifest, WorldPlugin.executeMcpTool? hook, validateManifest extended with MAN-01..08 rules, getNamespacedTools + validateToolArgs in src/lib/mcp/pluginTools.ts. 32/32 targeted tests GREEN. Pre-existing Wave 0 RED tests for future waves remain red (correct).
+
 - **21-01 (Wave 0, RED):** COMPLETE (2026-05-30, commit 5930bc7). Six RED test files authored:
   validateManifest.test.ts (extended + MAN-01..08), pluginTools.test.ts (PT-01..08),
   mcpSessionCatalog.test.ts (CAT-01..06), pluginToolsList.test.ts (LIST-01..05),
