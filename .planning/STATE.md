@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: full-mcp-support
 status: active
-last_updated: "2026-05-30T12:26:01.000Z"
+last_updated: "2026-05-30T12:45:00.000Z"
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 20
-  completed_plans: 12
+  completed_plans: 13
   percent: 32
 ---
 
@@ -84,6 +84,8 @@ Version 2.27.0.
   user later requests. The risky boot-path change is parked here.
 
 **Phase 21:** IN PROGRESS. Re-planned as v3 frontend-relay (21-REPLAN.md, decisions locked 2026-05-30).
+
+- **21-03 (Wave 2, catalog + tools/list):** COMPLETE (2026-05-30, commits 6779921 + cbd48e5 + 23b893c). publishSessionCatalog/readSessionCatalog (Redis SET+EX, {userId}:{sessionId} key, 120s TTL), POST /api/mcp/catalog (dual-auth, UUID guard, size cap, isDemo gate), useMcpCatalogPublisher hook (reads pluginManager manifests, POSTs on mount + 30s interval), composePluginToolsList (system tools + de-duplicated namespaced plugin tools + capability copy), registerPluginTools in route.ts (reads per-session catalog, registers stub handlers). CAT-01..06 + LIST-01..05 GREEN. Zod v4 z.record() fix applied.
 
 - **21-02 (Wave 1, SDK):** COMPLETE (2026-05-30, commit bda235f). McpToolDeclaration (NO execution field), mcpTools? + mcpCapabilities? in PluginManifest, WorldPlugin.executeMcpTool? hook, validateManifest extended with MAN-01..08 rules, getNamespacedTools + validateToolArgs in src/lib/mcp/pluginTools.ts. 32/32 targeted tests GREEN. Pre-existing Wave 0 RED tests for future waves remain red (correct).
 
