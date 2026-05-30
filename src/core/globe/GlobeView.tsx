@@ -37,6 +37,8 @@ import { usePersistentDataSync } from "./hooks/usePersistentDataSync";
 import { useSessionId } from "./hooks/useSessionId";
 import { useGlobeStateSync } from "./hooks/useGlobeStateSync";
 import { useGlobeCommandBridge } from "./hooks/useGlobeCommandBridge";
+import { useMcpCatalogPublisher } from "./hooks/useMcpCatalogPublisher";
+import { useMcpRelayBridge } from "./hooks/useMcpRelayBridge";
 
 /** Stable references */
 const CONTEXT_OPTIONS = { requestWebgl2: true, webgl: { antialias: true } } as const;
@@ -126,6 +128,8 @@ enableLighting,
     const sessionId = useSessionId();
     useGlobeStateSync(sessionId);
     useGlobeCommandBridge(sessionId);
+    useMcpCatalogPublisher(sessionId);
+    useMcpRelayBridge(sessionId);
     useCameraActions(viewerRef.current, viewerReady);
     useEntityRendering(viewerRef.current, viewerReady, visibleEntities, animatablesMapRef, hoveredEntityIdRef, sceneSettings);
     useModelRendering(viewerRef.current, viewerReady, animatablesMapRef);

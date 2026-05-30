@@ -19,6 +19,7 @@ import { auth as getSession } from "@/lib/auth";
 import { authenticateApiKey } from "@/lib/apiKeyAuth";
 import { drainToolInvocations } from "@/lib/mcpRelay";
 import { mcpInvocationsLimiter, getClientIp } from "@/lib/rateLimiters";
+import { isDemo } from "@/core/edition";
 
 const SESSION_ID_RE = /^[0-9a-f-]{36}$/i;
 
@@ -26,6 +27,10 @@ export async function GET(request: Request): Promise<NextResponse> {
     // Rate limit before any auth or DB work.
     const limited = mcpInvocationsLimiter.check(getClientIp(request));
     if (limited) return limited as NextResponse;
+
+    if (isDemo) {
+        return NextResponse.json({ error: "MCP is not available in demo mode" }, { status: 403 });
+    }
 
     // Dual-auth: NextAuth session PRIMARY, Bearer API key FALLBACK.
     // userId is resolved exclusively from the auth result -- never from the URL.

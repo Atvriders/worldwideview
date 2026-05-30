@@ -176,6 +176,13 @@ export function useMcpRelayBridge(sessionId: string): void {
 
         activeRef.current = true;
 
+        // Poll immediately on mount so the first invocation is dispatched
+        // without waiting up to POLL_INTERVAL_MS. Mirrors useMcpCatalogPublisher.
+        inFlightRef.current = true;
+        void pollOnce(sessionId, activeRef).finally(() => {
+            inFlightRef.current = false;
+        });
+
         const intervalId = setInterval(() => {
             if (inFlightRef.current) return;
             inFlightRef.current = true;

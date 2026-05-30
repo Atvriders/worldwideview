@@ -21,14 +21,22 @@ import { auth as getSession } from "@/lib/auth";
 import { authenticateApiKey } from "@/lib/apiKeyAuth";
 import { postToolResult } from "@/lib/mcpRelay";
 import { mcpResultsLimiter, getClientIp } from "@/lib/rateLimiters";
+import { isDemo } from "@/core/edition";
 
 const SESSION_ID_RE = /^[0-9a-f-]{36}$/i;
 const REQUEST_ID_RE = /^[0-9a-f-]{36}$/i;
+
+/** Pre-parse body size cap (1 MB). The post-parse cap inside postToolResult is 512 KB. */
+const MAX_BODY_BYTES = 1 * 1024 * 1024;
 
 export async function POST(request: Request): Promise<NextResponse> {
     // Rate limit before any auth or DB work.
     const limited = mcpResultsLimiter.check(getClientIp(request));
     if (limited) return limited as NextResponse;
+
+    if (isDemo) {
+        return NextResponse.json({ error: "MCP is not available in demo mode" }, { status: 403 });
+    }
 
     // Dual-auth: NextAuth session PRIMARY, Bearer API key FALLBACK.
     // userId is resolved exclusively from the auth result -- never from the body.
@@ -50,7 +58,11 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     let body: unknown;
     try {
-        body = await request.json();
+        const text = await request.text();
+        if (Buffer.byteLength(text, "utf8") > MAX_BODY_BYTES) {
+            return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+        }
+        body = JSON.parse(text);
     } catch {
         return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
     }

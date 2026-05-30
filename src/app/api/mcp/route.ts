@@ -174,6 +174,15 @@ async function handleMcpRequest(request: Request): Promise<Response> {
     // Phase 21: dynamic plugin tools — read the per-session catalog and
     // register each plugin tool so tools/list includes them.
     // NO DB/tenantId enumeration: discovery is browser-published only.
+    //
+    // list_changed note (best-effort, D-21-01):
+    // This server is stateless and per-request, so it cannot push
+    // list_changed notifications to connected clients. The catalog snapshot
+    // is whatever the browser published at the moment this request arrives.
+    // Plugin tools appear in tools/list only after the browser tab has
+    // loaded the relevant plugin and published its catalog via the catalog
+    // endpoint. Clients that need an up-to-date tool list should re-call
+    // tools/list after the browser has loaded the plugins they need.
     await registerPluginTools(server, authResult.userId);
 
     const transport = new WebStandardStreamableHTTPServerTransport({

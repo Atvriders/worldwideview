@@ -115,6 +115,33 @@ export async function POST(request: Request): Promise<NextResponse> {
         return NextResponse.json({ error: "body.capabilities must be an array" }, { status: 400 });
     }
 
+    // Validate each tool entry: namespacedName format, description, inputSchema.
+    const NAMESPACED_NAME_RE = /^[a-zA-Z0-9_-]+__[a-zA-Z0-9_-]+$/;
+    const MAX_NAMESPACED_NAME_LENGTH = 128;
+    for (const entry of body.tools) {
+        if (!entry || typeof entry !== "object") {
+            return NextResponse.json({ error: "invalid tool entry" }, { status: 400 });
+        }
+        const e = entry as Record<string, unknown>;
+        if (
+            typeof e.namespacedName !== "string" ||
+            e.namespacedName.length > MAX_NAMESPACED_NAME_LENGTH ||
+            !NAMESPACED_NAME_RE.test(e.namespacedName)
+        ) {
+            return NextResponse.json({ error: "invalid tool entry" }, { status: 400 });
+        }
+        if (typeof e.description !== "string") {
+            return NextResponse.json({ error: "invalid tool entry" }, { status: 400 });
+        }
+        if (
+            !e.inputSchema ||
+            typeof e.inputSchema !== "object" ||
+            Array.isArray(e.inputSchema)
+        ) {
+            return NextResponse.json({ error: "invalid tool entry" }, { status: 400 });
+        }
+    }
+
     const catalog: SessionCatalog = {
         tools: body.tools as SessionCatalog["tools"],
         capabilities: body.capabilities as string[],

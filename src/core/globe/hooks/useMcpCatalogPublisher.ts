@@ -21,6 +21,7 @@
 
 import { useEffect, useRef } from "react";
 import { pluginManager } from "@/core/plugins/PluginManager";
+import type { CatalogTool } from "@/lib/mcpSessionCatalog";
 
 /** Re-publish interval in ms -- mirrors the 19a session-heartbeat cadence. */
 const PUBLISH_INTERVAL_MS = 30_000;
@@ -28,14 +29,6 @@ const PUBLISH_INTERVAL_MS = 30_000;
 // ---------------------------------------------------------------------------
 // Catalog collection helper
 // ---------------------------------------------------------------------------
-
-interface CatalogTool {
-    namespacedName: string;
-    pluginId: string;
-    description: string;
-    inputSchema: Record<string, unknown>;
-    mcpCapabilities?: string[];
-}
 
 interface CatalogPayload {
     sessionId?: string;
