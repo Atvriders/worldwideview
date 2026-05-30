@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.2
-milestone_name: full-mcp-support
+milestone_name: Full MCP Support
 status: active
-last_updated: "2026-05-30T12:45:00.000Z"
+last_updated: "2026-05-30T09:54:58.389Z"
 progress:
   total_phases: 7
-  completed_phases: 2
-  total_plans: 20
-  completed_plans: 13
-  percent: 32
+  completed_phases: 3
+  total_plans: 23
+  completed_plans: 16
+  percent: 43
 ---
 
 # Project State
@@ -83,7 +83,9 @@ Version 2.27.0.
   + pub/sub subscriber. Covers CTRL-01/02/03/06. Basis = original 19-01..19-05 plans. Not executed unless
   user later requests. The risky boot-path change is parked here.
 
-**Phase 21:** IN PROGRESS. Re-planned as v3 frontend-relay (21-REPLAN.md, decisions locked 2026-05-30).
+**Phase 21:** COMPLETE (2026-05-30). All 5 waves done. PR #215 open on feat/mcp-support. Re-planned as v3 frontend-relay (21-REPLAN.md). Delivered: McpToolDeclaration SDK type, mcpTools/mcpCapabilities manifest fields, executeMcpTool hook, per-session Redis catalog, catalog POST route, useMcpCatalogPublisher, composePluginToolsList, mcpRelay (enqueue/wait/post/drain), /api/mcp/invocations GET, /api/mcp/results POST, useMcpRelayBridge, namespaced-tool dispatch in route.ts, README MCP config block. Version 2.29.x committed.
+
+**Phase 19b:** COMPLETE (2026-05-30, commit 7fd1d7e, version 2.30.0). SSE push transport replacing the 1500ms poll loop. Delivered: GET /api/globe/commands/stream (ReadableStream, 200ms drain, 15s keepalive, 16s max, dual-auth, isDemo 403, globeCommandsStreamLimiter 10/60s, cancel() disconnect cleanup), useGlobeCommandBridge rewritten to EventSource with envelope validation and onerror handler. Poll route kept. 654/654 tests GREEN. tsc + lint clean.
 
 - **21-03 (Wave 2, catalog + tools/list):** COMPLETE (2026-05-30, commits 6779921 + cbd48e5 + 23b893c). publishSessionCatalog/readSessionCatalog (Redis SET+EX, {userId}:{sessionId} key, 120s TTL), POST /api/mcp/catalog (dual-auth, UUID guard, size cap, isDemo gate), useMcpCatalogPublisher hook (reads pluginManager manifests, POSTs on mount + 30s interval), composePluginToolsList (system tools + de-duplicated namespaced plugin tools + capability copy), registerPluginTools in route.ts (reads per-session catalog, registers stub handlers). CAT-01..06 + LIST-01..05 GREEN. Zod v4 z.record() fix applied.
 
@@ -178,6 +180,36 @@ user discussion on WebSocket + custom server.ts) -> 21 (re-plan pause). route.ts
 - **Scope expansion (2026-05-29, user-approved):** keys are generic transport-agnostic API keys (req
   API-01); one reusable `authenticateApiKey()` middleware; capabilities as a shared service layer
   wrapped by MCP + future REST (`/api/v1/*`, Phases 20/21). CLI deferred to a future milestone.
+
+## Milestone Audit (2026-05-30)
+
+v1.2 audited: status **tech_debt** (no critical blockers). Report: `.planning/v1.2-MILESTONE-AUDIT.md`.
+Requirements: 31 Complete, 2 Partial (CTRL-02 entityId-only focus, MCP-QA-03 reconnect test),
+2 Deferred (PLG-01/PLG-02 -- marketplace descoped to v1.3 per 21-REPLAN). Integration: 47/52,
+all 4 browser hooks mounted, 9/12 E2E flows complete (2 broken = the deferred PLG tools).
+
+**Tech debt closed (commit dc1e802, version 2.30.1, pushed):** mcpRelay enqueue+postResult made
+atomic (multi/exec) + redis.ts RedisMultiChain.set(); v1 entity routes got dual-auth + isDemo 403
+gate + NaN limit guard + global-read intent comment; useGlobeStateSync immediate initial push
+(ran-once ref) closes the session-registration race; useMcpCatalogPublisher wired to
+getNamespacedTools (DRY); deleted dead pluginToolsList.ts. Code + security review: no Critical/High;
+all review warnings folded in. 643/643 tests, tsc clean, lint clean.
+
+REQUIREMENTS.md traceability table + checkboxes updated to actual status. ROADMAP.md has a
+"Deferred to v1.3 (Backlog)" section for PLG-01/02 (999.1/999.2).
+
+**Gap-closure 18-05 (2026-05-30, commit ee16ec0):** POST /api/globe/state isDemo gate added.
+Returns 403 { error: "Not available in demo edition" } before auth when isDemo is true. Closes
+GAP-01 from PR #215 pre-merge audit. vi.hoisted() pattern used for mutable editionMock (deviation
+from plan's simpler const suggestion -- Vitest hoisting requires it). 6/6 tests green, tsc clean.
+useGlobeStateSync confirmed to handle 403 silently with no code change (fetch catches only thrown
+exceptions, not HTTP responses). RSRC-01 fully satisfied.
+
+## Remaining for milestone close
+
+1. Merge PR #215 (feat/mcp-support -> main) once CI is green.
+2. After merge: run milestone lifecycle (`/gsd:autonomous` no --only, or
+   `/gsd:complete-milestone v1.2` then `/gsd:cleanup`) to archive + tag + clean up the worktree.
 
 ## Blockers
 
