@@ -49,9 +49,10 @@ describe("filterTools tool descriptions (DESC-03)", () => {
         expect(schemas[name].description).toContain("Example:");
     });
 
-    it("get_plugin_filters description states [] / no-session limitation", () => {
+    it("get_plugin_filters description documents availability object shape", () => {
         const desc = schemas["get_plugin_filters"].description;
-        expect(desc).toMatch(/\[\]|no globe session/);
+        expect(desc).toContain("available");
+        expect(desc).toContain("no_session_active");
     });
 });
 
@@ -94,7 +95,7 @@ describe("clear_filter tool handler", () => {
 });
 
 describe("get_plugin_filters tool handler", () => {
-    it("returns the plugin's filterDefinitions array as JSON", async () => {
+    it("returns { available: true, filters: [...] } when plugin is loaded with filters", async () => {
         const defs = [{ id: "status", label: "Status", type: "select", propertyKey: "status" }];
         mockReadSessionCatalog.mockResolvedValue({
             tools: [],
@@ -103,19 +104,21 @@ describe("get_plugin_filters tool handler", () => {
         } as never);
 
         const result = await handlers["get_plugin_filters"]({ pluginId: "flights" });
+        const parsed = JSON.parse(textOf(result));
 
-        expect(JSON.parse(textOf(result))).toEqual(defs);
+        expect(parsed).toEqual({ available: true, filters: defs });
     });
 
-    it("returns [] when there is no active session", async () => {
+    it("returns { available: false, reason: 'no_session_active' } when no active session", async () => {
         mockResolveActiveSessionId.mockResolvedValue(null);
 
         const result = await handlers["get_plugin_filters"]({ pluginId: "flights" });
+        const parsed = JSON.parse(textOf(result));
 
-        expect(JSON.parse(textOf(result))).toEqual([]);
+        expect(parsed).toEqual({ available: false, reason: "no_session_active" });
     });
 
-    it("returns [] when catalog has no entry for the plugin", async () => {
+    it("returns { available: false, reason: 'plugin not loaded' } when plugin key absent from catalog", async () => {
         mockReadSessionCatalog.mockResolvedValue({
             tools: [],
             capabilities: [],
@@ -123,7 +126,21 @@ describe("get_plugin_filters tool handler", () => {
         } as never);
 
         const result = await handlers["get_plugin_filters"]({ pluginId: "flights" });
+        const parsed = JSON.parse(textOf(result));
 
-        expect(JSON.parse(textOf(result))).toEqual([]);
+        expect(parsed).toEqual({ available: false, reason: "plugin not loaded" });
+    });
+
+    it("returns { available: true, filters: [] } when plugin is loaded but declares no filters", async () => {
+        mockReadSessionCatalog.mockResolvedValue({
+            tools: [],
+            capabilities: [],
+            filterDefinitions: { flights: [] },
+        } as never);
+
+        const result = await handlers["get_plugin_filters"]({ pluginId: "flights" });
+        const parsed = JSON.parse(textOf(result));
+
+        expect(parsed).toEqual({ available: true, filters: [] });
     });
 });
