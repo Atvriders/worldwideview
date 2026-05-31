@@ -37,7 +37,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 
 - [x] **Phase 26: Server Instructions + Orientation** - Agent arrives oriented with role framing, canonical workflows, and named MCP Prompts baked into the server (completed 2026-05-31)
 - [x] **Phase 27: Tool Description Rewrite** - All 15+ existing tools rewritten to the 6-component standard so agents select and invoke them correctly on the first try (completed 2026-05-31)
-- [ ] **Phase 28: Smart Response Contracts + Favorites CRUD** - Query responses carry semantic empty reasons, get_plugin_filters signals unavailable plugins, and favorites gain full update support
+- [x] **Phase 28: Smart Response Contracts + Favorites CRUD** - Query responses carry semantic empty reasons, get_plugin_filters signals unavailable plugins, and favorites gain full update support (completed 2026-05-31)
 - [ ] **Phase 29: Compound and Discovery Tools** - Three new tools let agents self-orient and investigate in one call rather than assembling multi-step pipelines manually
 
 ## Phase Details
@@ -127,7 +127,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
   4. Calling `update_favorite(id, { name: "New Name", notes: "Updated note" })` persists the change and is reflected in the next `list_favorites` response without requiring `remove_favorite` + `save_favorite`
 **Plans**: 3 plans
 - [x] 28-01-PLAN.md — RESP-01: emptyReason discriminated service results + userId threading into registerDataQueryTools + 4-tool passthrough with session-first precedence + tests (wave 1)
-- [ ] 28-02-PLAN.md — RESP-02: get_plugin_filters availability wrapper (4 shapes) + Phase 27 description/test updates (wave 2, depends on 28-01 for route.ts seam)
+- [x] 28-02-PLAN.md — RESP-02: get_plugin_filters availability wrapper (4 shapes) + Phase 27 description/test updates (wave 2, depends on 28-01 for route.ts seam)
 - [x] 28-03-PLAN.md — CRUD-01: [BLOCKING] notes String? migration + update_favorite tool + list_favorites notes surfacing + tests (wave 1, independent files)
 
 ### Phase 29: Compound and Discovery Tools
@@ -152,7 +152,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 | 25. Documentation | 1/1 | Complete | 2026-05-31 |
 | 26. Server Instructions + Orientation | 1/1 | Complete   | 2026-05-31 |
 | 27. Tool Description Rewrite | 3/3 | Complete   | 2026-05-31 |
-| 28. Smart Response Contracts + Favorites CRUD | 2/3 | In Progress|  |
+| 28. Smart Response Contracts + Favorites CRUD | 3/3 | Complete   | 2026-05-31 |
 | 29. Compound and Discovery Tools | 0/? | Not started | - |
 
 ## Backlog
