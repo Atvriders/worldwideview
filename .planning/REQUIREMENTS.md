@@ -31,9 +31,9 @@ Tool descriptions must include: (1) purpose verb+object front-loaded, (2) when-t
 
 ### TOOL -- New Compound & Discovery Tools
 
-- [ ] **TOOL-01**: `list_available_plugins` MCP tool returns which plugins are currently streaming data to the engine, including entity counts and queryable entity types per plugin -- agents call this before attempting any data query
-- [ ] **TOOL-02**: `get_globe_context` MCP tool returns a full orientation snapshot in one call: active session count, camera position, active layers, applied filters, loaded plugin list -- replaces reading multiple resources separately
-- [ ] **TOOL-03**: `investigate_area(place_name, entity_type, radius_km?)` compound MCP tool that internally geocodes the place, checks which plugins are streaming the entity type, queries the bounding region, positions the globe camera, and returns both the entity list and a prose situation summary
+- [x] **TOOL-01**: `list_available_plugins` MCP tool returns which plugins are currently streaming data to the engine, including entity counts and queryable entity types per plugin -- agents call this before attempting any data query
+- [x] **TOOL-02**: `get_globe_context` MCP tool returns a full orientation snapshot in one call: active session count, camera position, active layers, applied filters, loaded plugin list -- replaces reading multiple resources separately
+- [x] **TOOL-03**: `investigate_area(place_name, entity_type, radius_km?)` compound MCP tool that internally geocodes the place, checks which plugins are streaming the entity type, queries the bounding region, positions the globe camera, and returns both the entity list and a prose situation summary
 
 ### CRUD -- Full Favorites Lifecycle
 
@@ -80,9 +80,9 @@ Tool descriptions must include: (1) purpose verb+object front-loaded, (2) when-t
 | RESP-01 | Phase 28 | Complete |
 | RESP-02 | Phase 28 | Complete |
 | CRUD-01 | Phase 28 | Complete |
-| TOOL-01 | Phase 29 | Pending |
-| TOOL-02 | Phase 29 | Pending |
-| TOOL-03 | Phase 29 | Pending |
+| TOOL-01 | Phase 29 | Complete |
+| TOOL-02 | Phase 29 | Complete |
+| TOOL-03 | Phase 29 | Complete |
 
 **Coverage:**
 - v1.4 requirements: 13 total

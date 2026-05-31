@@ -128,9 +128,9 @@ export function registerDiscoveryTools(
                 "Parameters: place_name (required), entity_type (required, case-insensitive substring match against plugin ids/names), radius_km (optional, default 50). " +
                 "Example: investigate_area({place_name:\"Auckland\",entity_type:\"flights\",radius_km:100})",
             inputSchema: {
-                place_name: z.string().describe("Place name to geocode (free-text, e.g. 'Auckland', 'Tokyo Bay')"),
-                entity_type: z.string().describe("Entity type to look for -- case-insensitive substring matched against streaming plugin ids/names"),
-                radius_km: z.number().optional().describe("Search radius in kilometres around the geocoded centre (default 50)"),
+                place_name: z.string().min(1).describe("Place name to geocode (free-text, e.g. 'Auckland', 'Tokyo Bay')"),
+                entity_type: z.string().min(1).describe("Entity type to look for -- case-insensitive substring matched against streaming plugin ids/names"),
+                radius_km: z.number().positive().optional().describe("Search radius in kilometres around the geocoded centre (default 50)"),
             },
         },
         async (args) => {
@@ -211,7 +211,7 @@ export function registerDiscoveryTools(
                 console.error("[discoveryTools] investigate_area failed:", err);
                 return textResult({
                     entities: [],
-                    summary: `investigate_area encountered an unexpected error for "${place_name}": ${String(err)}`,
+                    summary: `investigate_area encountered an unexpected error for "${place_name}". Please retry shortly.`,
                 });
             }
         },

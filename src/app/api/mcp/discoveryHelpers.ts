@@ -32,18 +32,21 @@ const MAX_PROPERTY_SAMPLE = 50;
  *
  * Latitude delta: radiusKm / 111 (1 degree lat ~ 111 km).
  * Longitude delta: radiusKm / (111 * cos(lat)), clamped to avoid divide-by-zero
- * near the poles (cos(lat) < 0.01 treated as 0.01).
+ * near the poles (cos(lat) < 0.01 treated as 0.01). East/west are wrapped to
+ * [-180, 180] so points near the antimeridian produce in-range bounds (the
+ * region query handles east < west as an antimeridian-crossing box).
  */
 export function radiusKmToBbox(lat: number, lon: number, radiusKm: number): RegionOptions {
     const latDelta = radiusKm / 111;
     const cosLat = Math.cos((lat * Math.PI) / 180);
     const clampedCos = Math.max(cosLat, 0.01);
     const lonDelta = radiusKm / (111 * clampedCos);
+    const wrapLon = (v: number): number => ((((v + 180) % 360) + 360) % 360) - 180;
     return {
         north: Math.min(lat + latDelta, 90),
         south: Math.max(lat - latDelta, -90),
-        east: lon + lonDelta,
-        west: lon - lonDelta,
+        east: wrapLon(lon + lonDelta),
+        west: wrapLon(lon - lonDelta),
     };
 }
 
@@ -151,7 +154,7 @@ export function buildInvestigateProse(args: InvestigateProseArgs): string {
             ? "Camera has been panned to the area."
             : "No active globe session -- camera pan skipped.";
         return (
-            `Found ${entityCount} ${entityType} entity${entityCount === 1 ? "" : "ies"} ` +
+            `Found ${entityCount} ${entityType} ${entityCount === 1 ? "entity" : "entities"} ` +
             `near ${displayName} (plugin: ${matchedPlugin}). ${cameraNote}`
         );
     }

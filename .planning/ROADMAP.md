@@ -38,7 +38,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 - [x] **Phase 26: Server Instructions + Orientation** - Agent arrives oriented with role framing, canonical workflows, and named MCP Prompts baked into the server (completed 2026-05-31)
 - [x] **Phase 27: Tool Description Rewrite** - All 15+ existing tools rewritten to the 6-component standard so agents select and invoke them correctly on the first try (completed 2026-05-31)
 - [x] **Phase 28: Smart Response Contracts + Favorites CRUD** - Query responses carry semantic empty reasons, get_plugin_filters signals unavailable plugins, and favorites gain full update support (completed 2026-05-31)
-- [ ] **Phase 29: Compound and Discovery Tools** - Three new tools let agents self-orient and investigate in one call rather than assembling multi-step pipelines manually
+- [x] **Phase 29: Compound and Discovery Tools** - Three new tools let agents self-orient and investigate in one call rather than assembling multi-step pipelines manually (completed 2026-05-31)
 
 ## Phase Details
 
@@ -141,7 +141,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
   4. `investigate_area` returns a meaningful prose report even when no entities match -- the summary explains why (e.g., no active flight plugin) rather than returning an empty structure
 **UI hint**: no
 **Plans**: 1 plan
-- [ ] 29-01-PLAN.md — All three discovery tools (list_available_plugins, get_globe_context, investigate_area) in discoveryTools.ts + shared discoveryHelpers.ts + route wiring + tests
+- [x] 29-01-PLAN.md — All three discovery tools (list_available_plugins, get_globe_context, investigate_area) in discoveryTools.ts + shared discoveryHelpers.ts + route wiring + tests
 
 ## Progress Table
 
@@ -154,7 +154,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 | 26. Server Instructions + Orientation | 1/1 | Complete   | 2026-05-31 |
 | 27. Tool Description Rewrite | 3/3 | Complete   | 2026-05-31 |
 | 28. Smart Response Contracts + Favorites CRUD | 3/3 | Complete   | 2026-05-31 |
-| 29. Compound and Discovery Tools | 0/1 | Not started | - |
+| 29. Compound and Discovery Tools | 1/1 | Complete   | 2026-05-31 |
 
 ## Backlog
 
