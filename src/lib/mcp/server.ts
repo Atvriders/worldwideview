@@ -156,9 +156,9 @@ export async function registerOrientationPrompts(
 
             const camera = snapshot
                 ? [
-                      `  latitude:  ${snapshot.camera?.lat ?? "unknown"}`,
-                      `  longitude: ${snapshot.camera?.lon ?? "unknown"}`,
-                      `  altitude:  ${snapshot.camera?.alt ?? "unknown"} m`,
+                      `  latitude:  ${snapshot.viewport?.lat ?? "unknown"}`,
+                      `  longitude: ${snapshot.viewport?.lon ?? "unknown"}`,
+                      `  altitude:  ${snapshot.viewport?.altitude ?? "unknown"} m`,
                   ]
                 : ["  unknown (no snapshot available)"];
 

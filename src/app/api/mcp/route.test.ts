@@ -46,6 +46,7 @@ vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => {
             connect: vi.fn().mockResolvedValue(undefined),
             registerResource: vi.fn(),
             registerTool: vi.fn(),
+            registerPrompt: vi.fn(),
         };
     });
     // Minimal ResourceTemplate stub so globeResources.ts can construct one

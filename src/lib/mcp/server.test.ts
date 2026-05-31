@@ -129,7 +129,7 @@ describe("orient-globe handler", () => {
             { sessionId: "sess-abc", lastSeen: Date.now() - 5000 },
         ]);
         mockReadState.mockResolvedValue({
-            camera: { lat: 51.5, lon: -0.12, alt: 1000000 },
+            viewport: { lat: 51.5, lon: -0.12, altitude: 1000000 },
             layers: { flights: { visible: true } },
         } as never);
 
