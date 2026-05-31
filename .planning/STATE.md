@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Location Intelligence
-status: verifying
-last_updated: "2026-05-31T01:19:13.164Z"
+status: complete
+last_updated: "2026-05-31T01:40:00.000Z"
 last_activity: 2026-05-31
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
-  percent: 75
+  completed_phases: 4
+  total_plans: 9
+  completed_plans: 9
+  percent: 100
 ---
 
 # Project State
@@ -24,13 +24,13 @@ See: .planning/PROJECT.md (updated 2026-05-31)
 
 ## Current Position
 
-Phase: 24 (route-wiring-version-bump) — COMPLETE
-Plan: 1 of 1 (24-01 landed)
-Status: Phase 24 COMPLETE — INTG-01 verified (all v1.3 registrars wired into POST /api/mcp); INTG-02 shipped (MCP_SERVER_VERSION 1.2.0 -> 1.3.0). Whole-project tsc clean, full Vitest suite (750 tests, +12) GREEN, pnpm build OK. Commits 5201ae3, 5ea7855.
+Phase: 25 (documentation) - COMPLETE
+Plan: 1 of 1 (25-01 landed)
+Status: Phase 25 COMPLETE - DOC-01..04 closed. Enriched all 8 v1.3 MCP tool descriptions, added docs/plugin-filter-guide.md, listed all tools in ConnectAgentHelper, added CHANGELOG.md v1.3.0 entry. tsc clean, 750 Vitest tests GREEN, build OK. Commits 84f8ade, 26d2063, 2eec714, f1405bd. Milestone v1.3 Location Intelligence COMPLETE (4 of 4 phases).
 Last activity: 2026-05-31
 Resume file: None
 
-Progress: [███████░░░] 75% (3 of 4 phases complete)
+Progress: [##########] 100% (4 of 4 phases complete)
 
 ## Key Decisions (carried from v1.2)
 

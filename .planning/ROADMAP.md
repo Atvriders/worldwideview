@@ -3,7 +3,7 @@
 ## Milestones
 
 - [x] **v1.2 Full MCP Support** - Phases 16-21 (shipped 2026-05-30) - [archive](milestones/v1.2-ROADMAP.md)
-- [ ] **v1.3 Location Intelligence** - Phases 22-25 (in progress)
+- [x] **v1.3 Location Intelligence** - Phases 22-25 (completed 2026-05-31)
 
 ## Phases
 
@@ -27,7 +27,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 - [x] **Phase 22: Geocoding + Favorites** - Geocode places, fly the globe, bookmark tracked entities (4/4 plans, verified 2026-05-31)
 - [x] **Phase 23: Entity Filtering** - Push live filters to the globe and query plugin-declared filter schemas
 - [x] **Phase 24: Route Wiring + Version Bump** - Wire all v1.3 registrars into the MCP handler and ship MCP_SERVER_VERSION 1.3.0
-- [ ] **Phase 25: Documentation** - MCP tool docs, plugin author filter guide, user-facing capability summary, and v1.3 release notes
+- [x] **Phase 25: Documentation** - MCP tool docs, plugin author filter guide, user-facing capability summary, and v1.3 release notes (1/1 plans, completed 2026-05-31)
 
 ## Phase Details
 
@@ -77,16 +77,17 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
   2. A `docs/plugin-filter-guide.md` (or equivalent) explains how a plugin author declares `filterDefinitions` in their manifest with a complete worked example for a hypothetical flights plugin
   3. ConnectAgentHelper or a linked doc lists all v1.3 tools an agent can call, with a plain-English description of each capability
   4. A v1.3 changelog entry (in `CHANGELOG.md` or the PR body) lists all 8 new MCP tools, the `search_entities` filter enhancement, and the version bump to 1.3.0
-**Plans**: TBD
+**Plans**: 25-01 (COMPLETE) - DOC-01..04 closed.
+**Status**: COMPLETE 2026-05-31. Enriched all 8 v1.3 tool descriptions (DOC-01), added docs/plugin-filter-guide.md (DOC-02), listed all tools in ConnectAgentHelper (DOC-03), added CHANGELOG.md v1.3.0 entry (DOC-04). tsc clean, 750 Vitest tests GREEN, build OK. Commits 84f8ade, 26d2063, 2eec714, f1405bd.
 
 ## Progress Table
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 22. Geocoding + Favorites | 4/4 | Complete ✓ | 2026-05-31 |
+| 22. Geocoding + Favorites | 4/4 | Complete | 2026-05-31 |
 | 23. Entity Filtering | 3/3 | Complete | 2026-05-31 |
-| 24. Route Wiring + Version Bump | 0/? | Not started | - |
-| 25. Documentation | 0/? | Not started | - |
+| 24. Route Wiring + Version Bump | 1/1 | Complete | 2026-05-31 |
+| 25. Documentation | 1/1 | Complete | 2026-05-31 |
 
 ## Backlog
 
