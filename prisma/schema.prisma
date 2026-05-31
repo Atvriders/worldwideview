@@ -32,6 +32,7 @@ model Favorite {
   pluginName String
   lastSeen   DateTime @default(now())
   userId     String
+  notes      String?
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, entityId])
