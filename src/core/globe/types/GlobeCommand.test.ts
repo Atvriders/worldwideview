@@ -162,3 +162,37 @@ describe("isValidGlobeCommand", () => {
         expect(isValidGlobeCommand([])).toBe(false);
     });
 });
+
+describe("flyTo validator", () => {
+    it("accepts valid point command with lat and lng only", () => {
+        expect(isValidGlobeCommand({ type: "flyTo", lat: 51.5, lng: -0.1 })).toBe(true);
+    });
+
+    it("accepts valid point command with lat, lng, and alt", () => {
+        expect(isValidGlobeCommand({ type: "flyTo", lat: 51.5, lng: -0.1, alt: 15000 })).toBe(true);
+    });
+
+    it("accepts valid command with a 4-element bbox [west,south,east,north]", () => {
+        expect(isValidGlobeCommand({ type: "flyTo", lat: 51.5, lng: -0.1, bbox: [-1, 50, 1, 52] })).toBe(true);
+    });
+
+    it("rejects bbox with wrong length (3 elements)", () => {
+        expect(isValidGlobeCommand({ type: "flyTo", lat: 51.5, lng: -0.1, bbox: [-1, 50, 1] })).toBe(false);
+    });
+
+    it("rejects lat out of range (>90)", () => {
+        expect(isValidGlobeCommand({ type: "flyTo", lat: 91, lng: 0 })).toBe(false);
+    });
+
+    it("rejects lng out of range (>180)", () => {
+        expect(isValidGlobeCommand({ type: "flyTo", lat: 0, lng: 181 })).toBe(false);
+    });
+
+    it("rejects negative alt (alt must be > 0 if provided)", () => {
+        expect(isValidGlobeCommand({ type: "flyTo", lat: 0, lng: 0, alt: -1 })).toBe(false);
+    });
+
+    it("rejects bbox with non-numeric element", () => {
+        expect(isValidGlobeCommand({ type: "flyTo", lat: 0, lng: 0, bbox: ["west", 50, 1, 52] })).toBe(false);
+    });
+});

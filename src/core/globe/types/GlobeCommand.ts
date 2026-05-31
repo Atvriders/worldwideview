@@ -6,7 +6,8 @@ export type GlobeCommand =
     | { type: "pan"; lat: number; lon: number; alt: number; duration?: number; heading?: number; pitch?: number }
     | { type: "focusEntity"; entityId?: string; lat?: number; lon?: number }
     | { type: "toggleLayer"; layerId: string; enabled?: boolean }
-    | { type: "setTimeline"; currentTime?: string; timeWindow?: TimeWindowLiteral; isPlaybackMode?: boolean };
+    | { type: "setTimeline"; currentTime?: string; timeWindow?: TimeWindowLiteral; isPlaybackMode?: boolean }
+    | { type: "flyTo"; lat: number; lng: number; alt?: number; bbox?: [number, number, number, number] };
 
 function isNumber(v: unknown): v is number {
     return typeof v === "number" && isFinite(v);
@@ -95,6 +96,23 @@ export function isValidGlobeCommand(obj: unknown): obj is GlobeCommand {
                 isOptionalTimeWindow(cmd["timeWindow"]) &&
                 isOptionalBoolean(cmd["isPlaybackMode"])
             );
+
+        case "flyTo": {
+            if (!isValidLat(cmd["lat"])) return false;
+            if (!(isNumber(cmd["lng"]) && (cmd["lng"] as number) >= -180 && (cmd["lng"] as number) <= 180)) return false;
+            if (!(isOptionalNumber(cmd["alt"]) && (cmd["alt"] === undefined || isValidAlt(cmd["alt"])))) return false;
+            if (cmd["bbox"] !== undefined) {
+                const bbox = cmd["bbox"];
+                if (!Array.isArray(bbox) || bbox.length !== 4) return false;
+                if (!bbox.every((v: unknown) => isNumber(v))) return false;
+                const [west, south, east, north] = bbox as number[];
+                if (west < -180 || west > 180) return false;
+                if (south < -90 || south > 90) return false;
+                if (east < -180 || east > 180) return false;
+                if (north < -90 || north > 90) return false;
+            }
+            return true;
+        }
 
         default:
             return false;
