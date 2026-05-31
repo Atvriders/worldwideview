@@ -35,7 +35,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 
 ### v1.4 Agentic Intelligence
 
-- [ ] **Phase 26: Server Instructions + Orientation** - Agent arrives oriented with role framing, canonical workflows, and named MCP Prompts baked into the server
+- [x] **Phase 26: Server Instructions + Orientation** - Agent arrives oriented with role framing, canonical workflows, and named MCP Prompts baked into the server (completed 2026-05-31)
 - [ ] **Phase 27: Tool Description Rewrite** - All 15+ existing tools rewritten to the 6-component standard so agents select and invoke them correctly on the first try
 - [ ] **Phase 28: Smart Response Contracts + Favorites CRUD** - Query responses carry semantic empty reasons, get_plugin_filters signals unavailable plugins, and favorites gain full update support
 - [ ] **Phase 29: Compound and Discovery Tools** - Three new tools let agents self-orient and investigate in one call rather than assembling multi-step pipelines manually
@@ -144,7 +144,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 | 23. Entity Filtering | 3/3 | Complete | 2026-05-31 |
 | 24. Route Wiring + Version Bump | 1/1 | Complete | 2026-05-31 |
 | 25. Documentation | 1/1 | Complete | 2026-05-31 |
-| 26. Server Instructions + Orientation | 0/? | Not started | - |
+| 26. Server Instructions + Orientation | 1/1 | Complete   | 2026-05-31 |
 | 27. Tool Description Rewrite | 0/? | Not started | - |
 | 28. Smart Response Contracts + Favorites CRUD | 0/? | Not started | - |
 | 29. Compound and Discovery Tools | 0/? | Not started | - |

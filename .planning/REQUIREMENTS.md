@@ -11,10 +11,10 @@ All v1.3 requirements are complete. See archive for details.
 
 ### INST -- Server Instructions & Orientation
 
-- [ ] **INST-01**: MCP server returns a populated `instructions` field in InitializeResult containing a role-framing markdown document that tells agents who WWV is, what tools are available, and the mental model for using them
-- [ ] **INST-02**: The `instructions` document embeds canonical workflow sequences: geocode-first before fly_to, check plugin availability before querying entities, read globe://sessions before sending any command tool
-- [ ] **INST-03**: MCP server registers an `orient-globe` Prompt that agents can invoke to get a structured snapshot of current sessions, active layers, and loaded plugins in one response
-- [ ] **INST-04**: MCP server registers an `investigate` Prompt that accepts a place name and guides the agent step-by-step through geocode -> plugin availability check -> region query -> globe action
+- [x] **INST-01**: MCP server returns a populated `instructions` field in InitializeResult containing a role-framing markdown document that tells agents who WWV is, what tools are available, and the mental model for using them
+- [x] **INST-02**: The `instructions` document embeds canonical workflow sequences: geocode-first before fly_to, check plugin availability before querying entities, read globe://sessions before sending any command tool
+- [x] **INST-03**: MCP server registers an `orient-globe` Prompt that agents can invoke to get a structured snapshot of current sessions, active layers, and loaded plugins in one response
+- [x] **INST-04**: MCP server registers an `investigate` Prompt that accepts a place name and guides the agent step-by-step through geocode -> plugin availability check -> region query -> globe action
 
 ### DESC -- Tool Description Rewrite (6-component standard)
 
@@ -70,10 +70,10 @@ Tool descriptions must include: (1) purpose verb+object front-loaded, (2) when-t
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INST-01 | Phase 26 | Pending |
-| INST-02 | Phase 26 | Pending |
-| INST-03 | Phase 26 | Pending |
-| INST-04 | Phase 26 | Pending |
+| INST-01 | Phase 26 | Complete |
+| INST-02 | Phase 26 | Complete |
+| INST-03 | Phase 26 | Complete |
+| INST-04 | Phase 26 | Complete |
 | DESC-01 | Phase 27 | Pending |
 | DESC-02 | Phase 27 | Pending |
 | DESC-03 | Phase 27 | Pending |
