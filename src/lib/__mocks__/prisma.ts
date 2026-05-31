@@ -15,5 +15,6 @@ export const prisma = {
         findMany: vi.fn(),
         delete: vi.fn(),
         deleteMany: vi.fn(),
+        update: vi.fn(),
     },
 };

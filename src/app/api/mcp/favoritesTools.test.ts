@@ -86,6 +86,18 @@ describe("save_favorite tool handler", () => {
 });
 
 describe("list_favorites tool handler", () => {
+    it("includes notes field on returned items", async () => {
+        mockPrisma.favorite.findMany.mockResolvedValue([
+            { id: "1", entityId: "ship:123", pluginId: "maritime", userId: "u1", pluginName: "Maritime", notes: "Watch this ship", lastSeen: new Date() },
+        ] as never);
+        mockReadActiveSessions.mockResolvedValue([]);
+
+        const result = await handlers["list_favorites"]({});
+        const text = (result as { content: Array<{ text: string }> }).content[0].text;
+        const parsed = JSON.parse(text);
+        expect(parsed[0]).toHaveProperty("notes", "Watch this ship");
+    });
+
     it("returns status 'live' for entity when active session exists", async () => {
         mockPrisma.favorite.findMany.mockResolvedValue([
             { id: "1", entityId: "ship:123", pluginId: "maritime", userId: "u1", pluginName: "Maritime", createdAt: new Date() },
@@ -125,6 +137,78 @@ describe("list_favorites tool handler", () => {
         const text = (result as { content: Array<{ text: string }> }).content[0].text;
         const parsed = JSON.parse(text);
         expect(parsed[0].status).toBe("stale");
+    });
+});
+
+describe("update_favorite tool handler", () => {
+    it("happy path: updates both label and notes", async () => {
+        mockPrisma.favorite.update.mockResolvedValue({ label: "New Name" } as never);
+
+        const result = await handlers["update_favorite"]({
+            favoriteId: "ship:123",
+            name: "New Name",
+            notes: "Check weekly",
+        });
+
+        expect(mockPrisma.favorite.update).toHaveBeenCalledWith({
+            where: expect.objectContaining({ userId: "u1", entityId: "ship:123" }),
+            data: { label: "New Name", notes: "Check weekly" },
+        });
+        const text = (result as { content: Array<{ text: string }> }).content[0].text;
+        expect(text).toBe("Updated favorite: New Name");
+    });
+
+    it("name-only: calls update with label only, not notes", async () => {
+        mockPrisma.favorite.update.mockResolvedValue({ label: "Renamed" } as never);
+
+        await handlers["update_favorite"]({ favoriteId: "ship:123", name: "Renamed" });
+
+        const call = mockPrisma.favorite.update.mock.calls[0][0] as { data: Record<string, unknown> };
+        expect(call.data).toHaveProperty("label", "Renamed");
+        expect(call.data).not.toHaveProperty("notes");
+    });
+
+    it("notes-only: calls update with notes only, not label", async () => {
+        mockPrisma.favorite.update.mockResolvedValue({ label: "Existing" } as never);
+
+        await handlers["update_favorite"]({ favoriteId: "ship:123", notes: "My annotation" });
+
+        const call = mockPrisma.favorite.update.mock.calls[0][0] as { data: Record<string, unknown> };
+        expect(call.data).toHaveProperty("notes", "My annotation");
+        expect(call.data).not.toHaveProperty("label");
+    });
+
+    it("empty-args: returns 'nothing to update' and does NOT call prisma.favorite.update", async () => {
+        const result = await handlers["update_favorite"]({ favoriteId: "ship:123" });
+
+        expect(mockPrisma.favorite.update).not.toHaveBeenCalled();
+        const text = (result as { content: Array<{ text: string }> }).content[0].text;
+        expect(text).toContain("nothing to update");
+    });
+
+    it("not-found: P2025 error returns 'update_favorite: favorite not found'", async () => {
+        const p2025 = Object.assign(new Error("not found"), { code: "P2025" });
+        mockPrisma.favorite.update.mockRejectedValue(p2025);
+
+        const result = await handlers["update_favorite"]({
+            favoriteId: "ship:999",
+            name: "Ghost",
+        });
+
+        const text = (result as { content: Array<{ text: string }> }).content[0].text;
+        expect(text).toBe("update_favorite: favorite not found");
+    });
+
+    it("uses (userId, entityId) selector from ctx, never from args", async () => {
+        mockPrisma.favorite.update.mockResolvedValue({ label: "X" } as never);
+
+        await handlers["update_favorite"]({ favoriteId: "ship:123", name: "X" });
+
+        expect(mockPrisma.favorite.update).toHaveBeenCalledWith(
+            expect.objectContaining({
+                where: expect.objectContaining({ userId: "u1", entityId: "ship:123" }),
+            }),
+        );
     });
 });
 
