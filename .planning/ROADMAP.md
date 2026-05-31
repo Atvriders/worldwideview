@@ -140,7 +140,8 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
   3. Calling `investigate_area("Auckland", "flights")` internally geocodes the place, checks which plugins stream flights, queries the bounding region, positions the globe camera over Auckland, and returns both the entity list and a prose situation summary describing what is happening in that area
   4. `investigate_area` returns a meaningful prose report even when no entities match -- the summary explains why (e.g., no active flight plugin) rather than returning an empty structure
 **UI hint**: no
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 29-01-PLAN.md — All three discovery tools (list_available_plugins, get_globe_context, investigate_area) in discoveryTools.ts + shared discoveryHelpers.ts + route wiring + tests
 
 ## Progress Table
 
@@ -153,7 +154,7 @@ Full details: [milestones/v1.2-ROADMAP.md](milestones/v1.2-ROADMAP.md)
 | 26. Server Instructions + Orientation | 1/1 | Complete   | 2026-05-31 |
 | 27. Tool Description Rewrite | 3/3 | Complete   | 2026-05-31 |
 | 28. Smart Response Contracts + Favorites CRUD | 3/3 | Complete   | 2026-05-31 |
-| 29. Compound and Discovery Tools | 0/? | Not started | - |
+| 29. Compound and Discovery Tools | 0/1 | Not started | - |
 
 ## Backlog
 

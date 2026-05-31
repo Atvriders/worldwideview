@@ -39,7 +39,7 @@ function validatePluginId(pluginId: string): string {
     return pluginId;
 }
 
-async function fetchPluginSnapshot(pluginId: string): Promise<PluginDataSnapshot | null> {
+export async function fetchPluginSnapshot(pluginId: string): Promise<PluginDataSnapshot | null> {
     const safeId = validatePluginId(pluginId);
     const engineBase = getEngineUrl();
     const url = new URL(`/api/${safeId}`, engineBase).toString();
@@ -64,7 +64,7 @@ async function fetchPluginSnapshot(pluginId: string): Promise<PluginDataSnapshot
     }
 }
 
-async function getAllPluginSnapshots(): Promise<PluginDataSnapshot[]> {
+export async function getAllPluginSnapshots(): Promise<PluginDataSnapshot[]> {
     const url = `${getEngineUrl()}/manifest`;
     let pluginIds: string[] = [];
     try {
