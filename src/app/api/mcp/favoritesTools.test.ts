@@ -67,7 +67,7 @@ describe("list_favorites tool handler", () => {
         mockPrisma.favorite.findMany.mockResolvedValue([
             { id: "1", entityId: "ship:123", pluginId: "maritime", userId: "u1", pluginName: "Maritime", createdAt: new Date() },
         ] as never);
-        mockReadActiveSessions.mockResolvedValue(["sess-abc"]);
+        mockReadActiveSessions.mockResolvedValue([{ sessionId: "sess-abc", lastSeen: Date.now() }]);
         mockGetEntityDetails.mockResolvedValue({ entityId: "ship:123", lat: 1, lon: 2 } as never);
 
         const result = await handlers["list_favorites"]({});
@@ -94,7 +94,7 @@ describe("list_favorites tool handler", () => {
         mockPrisma.favorite.findMany.mockResolvedValue([
             { id: "1", entityId: "ship:123", pluginId: "maritime", userId: "u1", pluginName: "Maritime", createdAt: new Date() },
         ] as never);
-        mockReadActiveSessions.mockResolvedValue(["sess-abc"]);
+        mockReadActiveSessions.mockResolvedValue([{ sessionId: "sess-abc", lastSeen: Date.now() }]);
         mockGetEntityDetails.mockResolvedValue(null);
 
         const result = await handlers["list_favorites"]({});
