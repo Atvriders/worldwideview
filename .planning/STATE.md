@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.4
 milestone_name: Agentic Intelligence
-status: verifying
-last_updated: "2026-05-31T06:42:38.354Z"
-last_activity: 2026-05-31
+status: executing
+last_updated: "2026-06-02T04:13:42.768Z"
+last_activity: 2026-06-02
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 17
-  completed_plans: 17
-  percent: 100
+  total_phases: 9
+  completed_phases: 7
+  total_plans: 22
+  completed_plans: 18
+  percent: 78
 ---
 
 # Project State
@@ -20,17 +20,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-31)
 
 **Core value:** A single globe controllable by any AI agent via MCP -- where the agent arrives oriented, investigates intelligently, and acts with confidence.
-**Current focus:** Phase 29 — Compound and Discovery Tools
+**Current focus:** Phase 30 — local-data-source-bridge-make-server-reachable-client-side-a
 
 ## Current Position
 
-Phase: 29 (Compound and Discovery Tools) — EXECUTING
-Plan: 1 of 1
-Status: Phase complete — ready for verification
-Last activity: 2026-05-31
+Phase: 30 (local-data-source-bridge-make-server-reachable-client-side-a) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-06-02
 Resume file: None
 
-Progress: [██████████] 100%
+Progress: [████████░░] 82%
 
 ## v1.4 Phase Map
 
@@ -65,6 +65,9 @@ None.
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 30 added: Local Data-Source Bridge (Option A): generalized LocalDataSource registry to make server-reachable static/client-side plugins MCP-queryable; camera first consumer
 - v1.2 archived at .planning/milestones/v1.2-* and tagged v1.2 in git.
 - PR #215 (feat/mcp-support) open on GitHub, awaiting merge.
 - v1.3 complete 2026-05-31. All 4 phases shipped, tsc clean, 750 tests GREEN.
