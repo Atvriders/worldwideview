@@ -126,5 +126,36 @@ export function validateManifest(
         }
     }
 
+    // MAN-LD: validate localData entries when present (Phase 30, D-02, T-30-01/T-30-02)
+    if ("localData" in manifest && manifest.localData !== undefined) {
+        if (!Array.isArray(manifest.localData)) {
+            errors.push("localData must be an array when present");
+        } else {
+            const VALID_LOCAL_DATA_TYPES = ["geojson", "route"] as const;
+            (manifest.localData as unknown as Record<string, unknown>[]).forEach((entry, idx) => {
+                const prefix = `localData[${idx}]`;
+
+                // name must be a non-empty string
+                if (typeof entry.name !== "string" || !(entry.name as string).trim()) {
+                    errors.push(`${prefix}: name must be a non-empty string`);
+                }
+
+                // type must be one of the allowed literals
+                if (!VALID_LOCAL_DATA_TYPES.includes(entry.type as typeof VALID_LOCAL_DATA_TYPES[number])) {
+                    errors.push(
+                        `${prefix}: type "${String(entry.type)}" is invalid; must be one of: ${VALID_LOCAL_DATA_TYPES.join(", ")}`,
+                    );
+                }
+
+                // path must be a string starting with "/" and must not contain ".." (T-30-01)
+                if (typeof entry.path !== "string" || !(entry.path as string).startsWith("/")) {
+                    errors.push(`${prefix}: path must be a string starting with "/"`);
+                } else if ((entry.path as string).includes("..")) {
+                    errors.push(`${prefix}: path must not contain ".." (traversal rejected)`);
+                }
+            });
+        }
+    }
+
     return { valid: errors.length === 0, errors };
 }
