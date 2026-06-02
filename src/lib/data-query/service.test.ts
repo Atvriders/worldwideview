@@ -21,7 +21,8 @@ import {
 vi.mock("@/lib/data-query/localSources", () => ({
     hasLocalSource: vi.fn().mockResolvedValue(false),
     getLocalSourceIds: vi.fn().mockResolvedValue(new Set<string>()),
-    resolveLocalSnapshot: vi.fn().mockResolvedValue(null),
+    // resolveLocalSnapshot never returns null per registry contract; default to empty snapshot.
+    resolveLocalSnapshot: vi.fn().mockResolvedValue({ pluginId: "", entities: [], timestamp: new Date() }),
 }));
 
 // Import mocked fns so we can override per-test.
@@ -38,7 +39,7 @@ beforeEach(() => {
     // Re-apply safe defaults after resetAllMocks clears all mock state.
     vi.mocked(hasLocalSource).mockResolvedValue(false);
     vi.mocked(getLocalSourceIds).mockResolvedValue(new Set<string>());
-    vi.mocked(resolveLocalSnapshot).mockResolvedValue(null);
+    vi.mocked(resolveLocalSnapshot).mockResolvedValue({ pluginId: "", entities: [], timestamp: new Date() });
 });
 
 // ---------------------------------------------------------------------------

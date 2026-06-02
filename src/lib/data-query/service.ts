@@ -9,6 +9,7 @@ import type {
 } from "./types";
 import { matchFilterValue } from "@/core/filters/matchFilterValue";
 import type { FilterValue } from "@/core/plugins/PluginTypes";
+import { hasLocalSource, resolveLocalSnapshot, getLocalSourceIds } from "./localSources";
 
 function getEngineUrl(): string {
     return process.env.WWV_DATA_ENGINE_URL ?? "http://localhost:5001";
@@ -39,8 +40,12 @@ function validatePluginId(pluginId: string): string {
     return pluginId;
 }
 
-export async function fetchPluginSnapshot(pluginId: string): Promise<PluginDataSnapshot | null> {
-    const safeId = validatePluginId(pluginId);
+/**
+ * Private helper: attempt to fetch a plugin snapshot from the data engine.
+ * Returns null on 404, non-2xx, or network failure.
+ * Validation of pluginId is the caller's responsibility.
+ */
+async function fetchEngineSnapshot(safeId: string): Promise<PluginDataSnapshot | null> {
     const engineBase = getEngineUrl();
     const url = new URL(`/api/${safeId}`, engineBase).toString();
     try {
@@ -64,23 +69,48 @@ export async function fetchPluginSnapshot(pluginId: string): Promise<PluginDataS
     }
 }
 
-export async function getAllPluginSnapshots(): Promise<PluginDataSnapshot[]> {
-    const url = `${getEngineUrl()}/manifest`;
-    let pluginIds: string[] = [];
-    try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-        if (!res.ok) {
-            console.error(`[data-query] Manifest fetch returned ${res.status}`);
-            return [];
-        }
-        const data: unknown = await res.json();
-        pluginIds = ((data as Record<string, unknown>)?.plugins as string[]) ?? [];
-    } catch (err) {
-        console.error("[data-query] Failed to fetch manifest:", err);
-        return [];
+/**
+ * Fetch a snapshot for the given pluginId.
+ * Resolution order (D-08):
+ *   1. Data engine (engine-first, real-time data).
+ *   2. Local registry (server-side static/client-side sources that have no engine endpoint).
+ *   3. null — the pluginId is genuinely unknown; callers map this to "plugin_not_streaming".
+ */
+export async function fetchPluginSnapshot(pluginId: string): Promise<PluginDataSnapshot | null> {
+    const safeId = validatePluginId(pluginId);
+
+    const engineSnapshot = await fetchEngineSnapshot(safeId);
+    if (engineSnapshot !== null) return engineSnapshot;
+
+    if (await hasLocalSource(safeId)) {
+        return resolveLocalSnapshot(safeId);
     }
 
-    const results = await Promise.allSettled(pluginIds.map(fetchPluginSnapshot));
+    return null;
+}
+
+export async function getAllPluginSnapshots(): Promise<PluginDataSnapshot[]> {
+    const manifestUrl = `${getEngineUrl()}/manifest`;
+    let enginePluginIds: string[] = [];
+    try {
+        const res = await fetch(manifestUrl, { signal: AbortSignal.timeout(5000) });
+        if (!res.ok) {
+            console.error(`[data-query] Manifest fetch returned ${res.status}`);
+        } else {
+            const data: unknown = await res.json();
+            enginePluginIds = ((data as Record<string, unknown>)?.plugins as string[]) ?? [];
+        }
+    } catch (err) {
+        console.error("[data-query] Failed to fetch manifest:", err);
+    }
+
+    // Union engine ids with local-registry ids; dedupe using a Set so a pluginId
+    // present in both resolves only once (engine-first ordering is preserved
+    // because engine ids come first in the Set iteration).
+    const localIds = Array.from(await getLocalSourceIds());
+    const allIds = Array.from(new Set([...enginePluginIds, ...localIds]));
+
+    const results = await Promise.allSettled(allIds.map(fetchPluginSnapshot));
     return results.reduce<PluginDataSnapshot[]>((acc, result) => {
         if (result.status === "fulfilled" && result.value !== null) {
             acc.push(result.value);
