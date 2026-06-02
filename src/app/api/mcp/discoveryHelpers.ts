@@ -16,6 +16,7 @@ import type { PluginDataSnapshot } from "@/lib/data-query/types";
 import type { RegionOptions } from "@/lib/data-query/types";
 import type { FilterDefinition } from "@/core/plugins/PluginTypes";
 import { getAllPluginSnapshots } from "@/lib/data-query/service";
+import { getLocalSourceIds } from "@/lib/data-query/localSources";
 import { readActiveSessions, readGlobeState } from "@/lib/globeStateStore";
 import { readSessionCatalog } from "@/lib/mcpSessionCatalog";
 import { resolveActiveSessionId } from "@/lib/globeCommandQueue";
@@ -91,6 +92,9 @@ export interface StreamingPlugin {
     pluginName: string;
     entityCount: number;
     entityTypes: string[];
+    /** Whether this plugin's data originates from the live engine stream or a
+     * server-reachable local/static source (D-05). */
+    source: "engine" | "local";
 }
 
 export interface ListStreamingPluginsResult {
@@ -108,11 +112,13 @@ export async function listStreamingPlugins(): Promise<ListStreamingPluginsResult
     if (snapshots.length === 0) {
         return { plugins: [], reason: "engine unreachable" };
     }
+    const localIds = await getLocalSourceIds();
     const plugins: StreamingPlugin[] = snapshots.map((snap) => ({
         pluginId: snap.pluginId,
         pluginName: snap.pluginId, // manifest exposes ids only
         entityCount: snap.entities.length,
         entityTypes: deriveEntityTypes(snap),
+        source: localIds.has(snap.pluginId) ? "local" : "engine",
     }));
     return { plugins };
 }
