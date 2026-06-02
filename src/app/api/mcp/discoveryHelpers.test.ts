@@ -4,11 +4,13 @@ vi.mock("@/lib/data-query/service");
 vi.mock("@/lib/globeStateStore");
 vi.mock("@/lib/mcpSessionCatalog");
 vi.mock("@/lib/globeCommandQueue");
+vi.mock("@/lib/data-query/localSources");
 
 import { getAllPluginSnapshots } from "@/lib/data-query/service";
 import { readActiveSessions, readGlobeState } from "@/lib/globeStateStore";
 import { readSessionCatalog } from "@/lib/mcpSessionCatalog";
 import { resolveActiveSessionId } from "@/lib/globeCommandQueue";
+import { getLocalSourceIds } from "@/lib/data-query/localSources";
 
 import {
     radiusKmToBbox,
@@ -24,6 +26,7 @@ const mockGetAllSnapshots = vi.mocked(getAllPluginSnapshots);
 const mockReadActiveSessions = vi.mocked(readActiveSessions);
 const mockReadGlobeState = vi.mocked(readGlobeState);
 const mockReadSessionCatalog = vi.mocked(readSessionCatalog);
+const mockGetLocalSourceIds = vi.mocked(getLocalSourceIds);
 
 // resolveActiveSessionId is re-exported from discoveryHelpers but not called
 // directly in these tests; mocked to avoid ioredis errors.
@@ -31,6 +34,8 @@ vi.mocked(resolveActiveSessionId).mockResolvedValue(null);
 
 beforeEach(() => {
     vi.clearAllMocks();
+    // Default: no local sources; individual tests override as needed.
+    mockGetLocalSourceIds.mockResolvedValue(new Set<string>());
 });
 
 // ---------------------------------------------------------------------------
@@ -202,6 +207,71 @@ describe("buildInvestigateProse", () => {
         });
         expect(prose.length).toBeGreaterThan(0);
         expect(prose).toContain("no");
+    });
+});
+
+// ---------------------------------------------------------------------------
+// listStreamingPlugins -- source tagging (Plan 30-04, D-05)
+// ---------------------------------------------------------------------------
+describe("listStreamingPlugins -- source tagging", () => {
+    const makeSnap = (pluginId: string, entityCount: number) => ({
+        pluginId,
+        entities: Array.from({ length: entityCount }, (_, i) => ({
+            id: `${pluginId}-e${i}`,
+            pluginId,
+            latitude: 0,
+            longitude: 0,
+            timestamp: new Date(),
+            properties: {},
+        })),
+        timestamp: new Date(),
+    });
+
+    it("tags engine plugin as source:'engine' and local plugin as source:'local'", async () => {
+        mockGetAllSnapshots.mockResolvedValue([
+            makeSnap("aviation", 3),
+            makeSnap("camera", 5),
+        ]);
+        mockGetLocalSourceIds.mockResolvedValue(new Set(["camera"]));
+
+        const result = await listStreamingPlugins();
+
+        expect(result.reason).toBeUndefined();
+        expect(result.plugins).toHaveLength(2);
+
+        const aviation = result.plugins.find((p) => p.pluginId === "aviation");
+        expect(aviation?.source).toBe("engine");
+
+        const camera = result.plugins.find((p) => p.pluginId === "camera");
+        expect(camera?.source).toBe("local");
+        expect(camera?.entityCount).toBeGreaterThan(0);
+    });
+
+    it("tags by id: only the id present in localIds receives source:'local'", async () => {
+        mockGetAllSnapshots.mockResolvedValue([
+            makeSnap("flights", 10),
+            makeSnap("ships", 4),
+            makeSnap("camera", 2),
+        ]);
+        mockGetLocalSourceIds.mockResolvedValue(new Set(["camera"]));
+
+        const result = await listStreamingPlugins();
+
+        const byId = Object.fromEntries(result.plugins.map((p) => [p.pluginId, p.source]));
+        expect(byId["flights"]).toBe("engine");
+        expect(byId["ships"]).toBe("engine");
+        expect(byId["camera"]).toBe("local");
+    });
+
+    it("engine-unreachable passthrough: empty snapshots still returns { plugins: [], reason: 'engine unreachable' }", async () => {
+        mockGetAllSnapshots.mockResolvedValue([]);
+        // localIds irrelevant when snapshots list is empty
+        mockGetLocalSourceIds.mockResolvedValue(new Set(["camera"]));
+
+        const result = await listStreamingPlugins();
+
+        expect(result.plugins).toHaveLength(0);
+        expect(result.reason).toBe("engine unreachable");
     });
 });
 
