@@ -1,9 +1,32 @@
 name: Playwright Tests
+# Only run E2E tests when application code actually changes.
+# Doc/agent-rules/config-only changes skip the full 3-browser matrix.
+# Skipped workflow runs satisfy GitHub required status checks (neutral pass).
 on:
   push:
     branches: [ main, master ]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "prisma/**"
+      - "public/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "next.config.ts"
+      - "playwright.config.ts"
+      - ".github/workflows/playwright.yml"
   pull_request:
     branches: [ main, master ]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "prisma/**"
+      - "public/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "next.config.ts"
+      - "playwright.config.ts"
+      - ".github/workflows/playwright.yml"
 permissions:
   contents: read
 jobs:
@@ -17,7 +40,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - uses: pnpm/action-setup@v3
+    - uses: pnpm/action-setup@v6
       with:
         version: 9.15.4
 
@@ -48,7 +71,7 @@ jobs:
         NO_AT_BRIDGE: ${{ matrix.browser == 'firefox' && '1' || '0' }}
       run: pnpm test:e2e --project=${{ matrix.browser }}
       
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: ${{ !cancelled() }}
       with:
         name: playwright-report-${{ matrix.browser }}

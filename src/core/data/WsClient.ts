@@ -2,6 +2,16 @@ import type { WsStreamPayload, GeoEntity } from "@worldwideview/wwv-plugin-sdk";
 import { dataBus } from "./DataBus";
 import { pluginManager } from "../plugins/PluginManager";
 import { useStore } from "../state/store";
+import { ticketAuthEnabledForPlugin } from "../edition";
+import type { PluginTicket } from "@worldwideview/wwv-plugin-sdk";
+
+async function fetchPluginTicket(pluginId: string): Promise<PluginTicket> {
+  const res = await fetch(`/api/auth/ticket?pluginId=${encodeURIComponent(pluginId)}`);
+  if (!res.ok) throw new Error(`[WSClient] Ticket fetch failed (${res.status}) for ${pluginId}`);
+  const data = await res.json() as { token?: string };
+  if (!data.token) throw new Error(`[WSClient] Ticket response missing token for ${pluginId}`);
+  return data.token as PluginTicket;
+}
 
 interface EngineConnection {
   ws: WebSocket | null;
@@ -9,10 +19,26 @@ interface EngineConnection {
   subscriptions: Set<string>;
   /** Grace period timer — closes the connection if no plugins remain subscribed */
   cleanupTimer: NodeJS.Timeout | null;
+  /** Backoff attempt counter — resets after a stable connection (>5s open) */
+  reconnectAttempts: number;
+  /** Timer that resets the backoff counter once a connection has been stable */
+  stableConnectionTimer: NodeJS.Timeout | null;
+  /** True while waiting for the server's welcome after sending an auth message */
+  awaitingWelcome: boolean;
+  /** Closes the connection if the server doesn't send welcome within 3s */
+  authTimeoutTimer: NodeJS.Timeout | null;
 }
 
-const RECONNECT_DELAY_MS = 5000;
+const RECONNECT_BASE_MS = 5000;
+const RECONNECT_MAX_MS = 60000; // Cap at 1 minute
+const RECONNECT_JITTER_MS = 4000;
+const STABLE_CONNECTION_MS = 5000; // Reset backoff after 5s of stable connection
 const CLEANUP_GRACE_MS = 30000;
+
+/** Normalizes underscore-based pluginIds to kebab-case (e.g. `my_plugin` → `my-plugin`). */
+function normalizePluginId(id: string): string {
+  return id.replace(/_/g, "-");
+}
 
 class WebSocketClient {
   private engines = new Map<string, EngineConnection>();
@@ -25,6 +51,10 @@ class WebSocketClient {
         reconnectTimer: null,
         subscriptions: new Set(),
         cleanupTimer: null,
+        reconnectAttempts: 0,
+        stableConnectionTimer: null,
+        awaitingWelcome: false,
+        authTimeoutTimer: null,
       };
       this.engines.set(engineUrl, engine);
     }
@@ -43,9 +73,37 @@ class WebSocketClient {
 
     engine.ws.onopen = () => {
       console.debug(`[WSClient] 🟢 Connected to ${engineUrl}. WS Handshake took ${(performance.now() - wsStart).toFixed(2)}ms`);
-      // Resubscribe to all active plugins on this engine
-      for (const pluginId of engine.subscriptions) {
-        this.send(engine, { action: "subscribe", pluginId });
+      // Only reset backoff if the connection stays open for a non-trivial time —
+      // an immediate close (e.g. server-side rejection) shouldn't be treated as success.
+      if (engine.stableConnectionTimer) clearTimeout(engine.stableConnectionTimer);
+      engine.stableConnectionTimer = setTimeout(() => {
+        engine.reconnectAttempts = 0;
+      }, STABLE_CONNECTION_MS);
+
+      // Check whether any subscription on this engine requires ticket auth.
+      const ticketPlugin = [...engine.subscriptions].find((id) => ticketAuthEnabledForPlugin(id));
+      if (ticketPlugin) {
+        engine.awaitingWelcome = true;
+        fetchPluginTicket(ticketPlugin)
+          .then((ticket) => {
+            this.send(engine, { type: "auth", v: 1, token: ticket });
+            // 3s timeout — if the server doesn't send welcome, close and trigger reconnect.
+            engine.authTimeoutTimer = setTimeout(() => {
+              if (engine.awaitingWelcome) {
+                console.warn(`[WSClient] Auth timeout waiting for welcome from ${engineUrl}. Closing to reconnect.`);
+                engine.ws?.close();
+              }
+            }, 3000);
+          })
+          .catch((err: unknown) => {
+            console.error(`[WSClient] Failed to get ticket for ${ticketPlugin}:`, err instanceof Error ? err.message : err);
+            engine.ws?.close();
+          });
+      } else {
+        // No ticket auth required — subscribe immediately.
+        for (const pluginId of engine.subscriptions) {
+          this.send(engine, { action: "subscribe", pluginId });
+        }
       }
     };
 
@@ -55,9 +113,15 @@ class WebSocketClient {
         console.debug(`[WSClient] 📥 Received raw message at +${(msgTime - wsStart).toFixed(2)}ms from start:`, event.data.substring(0, 150) + (event.data.length > 150 ? '...' : ''));
         const data = JSON.parse(event.data);
 
-        // Handle welcome message (informational, no action needed)
         if (data.type === "welcome") {
           console.debug(`[WSClient] 👋 Engine ${engineUrl} serves: ${data.plugins?.join(", ")}`);
+          if (engine.awaitingWelcome) {
+            engine.awaitingWelcome = false;
+            if (engine.authTimeoutTimer) { clearTimeout(engine.authTimeoutTimer); engine.authTimeoutTimer = null; }
+            for (const pluginId of engine.subscriptions) {
+              this.send(engine, { action: "subscribe", pluginId });
+            }
+          }
           return;
         }
 
@@ -74,25 +138,41 @@ class WebSocketClient {
     };
 
     engine.ws.onclose = () => {
-      console.warn(`[WSClient] Disconnected from ${engineUrl}. Reconnecting in 5s...`);
       engine.ws = null;
+      engine.awaitingWelcome = false;
+      if (engine.authTimeoutTimer) { clearTimeout(engine.authTimeoutTimer); engine.authTimeoutTimer = null; }
+      if (engine.stableConnectionTimer) {
+        clearTimeout(engine.stableConnectionTimer);
+        engine.stableConnectionTimer = null;
+      }
       if (engine.reconnectTimer) clearTimeout(engine.reconnectTimer);
       // Only reconnect if there are still active subscriptions
       if (engine.subscriptions.size > 0) {
-        engine.reconnectTimer = setTimeout(() => this.connectEngine(engineUrl), RECONNECT_DELAY_MS);
+        // Exponential backoff with jitter to prevent thundering herd on engine restart.
+        // 5s -> 10s -> 20s -> 40s -> 60s (cap), plus ±4s of jitter so simultaneous
+        // sessions don't all reconnect at the same instant.
+        const expDelay = Math.min(
+          RECONNECT_BASE_MS * Math.pow(2, engine.reconnectAttempts),
+          RECONNECT_MAX_MS
+        );
+        const delay = expDelay + Math.random() * RECONNECT_JITTER_MS;
+        engine.reconnectAttempts++;
+        console.warn(`[WSClient] Disconnected from ${engineUrl}. Reconnecting in ${Math.round(delay / 1000)}s (attempt ${engine.reconnectAttempts})...`);
+        engine.reconnectTimer = setTimeout(() => this.connectEngine(engineUrl), delay);
       }
     };
   }
 
   private handleDataMessage(data: WsStreamPayload) {
-    const plugin = pluginManager.getPlugin(data.pluginId!)?.plugin;
+    const pluginId = normalizePluginId(data.pluginId!);
+    const plugin = pluginManager.getPlugin(pluginId)?.plugin;
     let finalEntities = data.payload as GeoEntity[];
-    const existingEntities = useStore.getState().entitiesByPlugin[data.pluginId!] || [];
+    const existingEntities = useStore.getState().entitiesByPlugin[pluginId] || [];
 
     if (plugin && typeof (plugin as any).mapWebsocketPayload === "function") {
       finalEntities = (plugin as any).mapWebsocketPayload(data.payload, existingEntities);
     } else if (!Array.isArray(data.payload)) {
-      console.warn(`[WsClient] Payload for ${data.pluginId} is an object but no mapWebsocketPayload exists. Ignoring.`);
+      console.warn(`[WsClient] Payload for ${pluginId} is an object but no mapWebsocketPayload exists. Ignoring.`);
       return;
     } else {
       finalEntities = finalEntities.map((e) => ({
@@ -101,10 +181,10 @@ class WebSocketClient {
       }));
     }
 
-    console.debug(`[WSClient] 🔄 Dispatching ${finalEntities.length} entities for ${data.pluginId} to DataBus`);
+    console.debug(`[WSClient] 🔄 Dispatching ${finalEntities.length} entities for ${pluginId} to DataBus`);
 
     dataBus.emit("dataUpdated", {
-      pluginId: data.pluginId!,
+      pluginId,
       entities: finalEntities,
     });
   }
@@ -127,7 +207,11 @@ class WebSocketClient {
 
     engine.subscriptions.add(pluginId);
     this.connectEngine(engineUrl);
-    this.send(engine, { action: "subscribe", pluginId });
+    // Only send immediately if auth is not in-flight; the welcome handler will
+    // replay all pending subscriptions once auth succeeds (see onmessage:121-124).
+    if (!engine.awaitingWelcome) {
+      this.send(engine, { action: "subscribe", pluginId });
+    }
   }
 
   public unsubscribe(pluginId: string, engineUrl: string) {
@@ -143,6 +227,8 @@ class WebSocketClient {
         if (engine.subscriptions.size === 0) {
           console.log(`[WSClient] No subscriptions remain for ${engineUrl}. Closing connection.`);
           if (engine.reconnectTimer) clearTimeout(engine.reconnectTimer);
+          if (engine.stableConnectionTimer) clearTimeout(engine.stableConnectionTimer);
+          if (engine.authTimeoutTimer) { clearTimeout(engine.authTimeoutTimer); engine.authTimeoutTimer = null; }
           engine.ws?.close();
           this.engines.delete(engineUrl);
         }

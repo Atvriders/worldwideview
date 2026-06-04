@@ -19,6 +19,33 @@ export interface ValidationResult {
 const VALID_TYPES = ["data-layer", "extension"] as const;
 const VALID_TRUSTS = ["built-in", "verified", "unverified"] as const;
 
+/** Regex for a safe MCP tool name identifier: only [a-zA-Z0-9_-]. */
+const SAFE_TOOL_NAME = /^[a-zA-Z0-9_-]+$/;
+
+/**
+ * Hostnames derived from the configured marketplace/instance URLs. A plugin
+ * bundle served from a custom deployment host (e.g. marketplace.wwv.local) must
+ * be accepted by the entry-URL allowlist below without that host being
+ * hardcoded. Computed once at module load; bad env values are skipped rather
+ * than crashing the module.
+ */
+const ENV_ALLOWED_ENTRY_HOSTS: ReadonlySet<string> = (() => {
+    const hosts = new Set<string>();
+    for (const envUrl of [
+        process.env.NEXT_PUBLIC_MARKETPLACE_URL,
+        process.env.NEXT_PUBLIC_WWV_MARKETPLACE_URL,
+        process.env.MARKETPLACE_URL,
+    ]) {
+        if (!envUrl) continue;
+        try {
+            hosts.add(new URL(envUrl).hostname);
+        } catch {
+            // Ignore unparsable env values — they simply don't contribute a host.
+        }
+    }
+    return hosts;
+})();
+
 /**
  * Validates a plugin manifest for structural integrity and security compliance.
  * This is the primary security gate for the WorldWideView plugin ecosystem.
@@ -64,7 +91,20 @@ export function validateManifest(
         const isWWV = entry.includes(".worldwideview.dev");
         const isCDN = entry.startsWith("https://cdn.jsdelivr.net") || entry.startsWith("https://unpkg.com");
 
-        if (!isRelative && !isLocal && !isWWV && !isCDN) {
+        // Accept bundles served from a configured marketplace/instance host
+        // (e.g. marketplace.wwv.local) derived from env, so custom deployment
+        // hostnames work without being hardcoded.
+        let isConfiguredHost = false;
+        if (ENV_ALLOWED_ENTRY_HOSTS.size > 0) {
+            try {
+                isConfiguredHost = ENV_ALLOWED_ENTRY_HOSTS.has(new URL(entry).hostname);
+            } catch {
+                // Relative paths and other non-absolute entries aren't parseable
+                // as full URLs — they're already covered by `isRelative`.
+            }
+        }
+
+        if (!isRelative && !isLocal && !isWWV && !isCDN && !isConfiguredHost) {
             errors.push("entry URL must be a relative path, CDN, localhost, or worldwideview.dev domain");
         }
     }
@@ -73,6 +113,84 @@ export function validateManifest(
     if (manifest.type === "extension") {
         if (!Array.isArray(manifest.extends) || manifest.extends.length === 0) {
             errors.push("Extension plugins require a non-empty extends array");
+        }
+    }
+
+    // MAN-03: mcpCapabilities must be string[] when present
+    if ("mcpCapabilities" in manifest && manifest.mcpCapabilities !== undefined) {
+        if (!Array.isArray(manifest.mcpCapabilities)) {
+            errors.push("mcpCapabilities must be a string array when present");
+        } else {
+            const allStrings = (manifest.mcpCapabilities as unknown[]).every(
+                (c) => typeof c === "string",
+            );
+            if (!allStrings) {
+                errors.push("mcpCapabilities must contain only strings");
+            }
+        }
+    }
+
+    // MAN-01 / MAN-02 / MAN-06 / MAN-07 / MAN-08: validate mcpTools entries
+    if ("mcpTools" in manifest && manifest.mcpTools !== undefined) {
+        if (!Array.isArray(manifest.mcpTools)) {
+            errors.push("mcpTools must be an array when present");
+        } else {
+            (manifest.mcpTools as unknown as Record<string, unknown>[]).forEach((tool, idx) => {
+                const prefix = `mcpTools[${idx}]`;
+
+                // MAN-06: name must be present
+                if (typeof tool.name !== "string" || !(tool.name as string).trim()) {
+                    errors.push(`${prefix}: mcpTools entry missing required field: name`);
+                } else {
+                    // MAN-02: name must be a safe identifier
+                    if (!SAFE_TOOL_NAME.test(tool.name as string)) {
+                        errors.push(
+                            `${prefix}: mcpTools tool name "${tool.name}" contains invalid identifier characters; only [a-zA-Z0-9_-] are allowed`,
+                        );
+                    }
+                }
+
+                // MAN-07: description must be present
+                if (typeof tool.description !== "string" || !(tool.description as string).trim()) {
+                    errors.push(`${prefix}: mcpTools entry missing required field: description`);
+                }
+
+                // MAN-08: inputSchema must be present and be an object
+                if (tool.inputSchema === undefined || tool.inputSchema === null || typeof tool.inputSchema !== "object") {
+                    errors.push(`${prefix}: mcpTools entry missing required field: inputSchema`);
+                }
+            });
+        }
+    }
+
+    // MAN-LD: validate localData entries when present (Phase 30, D-02, T-30-01/T-30-02)
+    if ("localData" in manifest && manifest.localData !== undefined) {
+        if (!Array.isArray(manifest.localData)) {
+            errors.push("localData must be an array when present");
+        } else {
+            const VALID_LOCAL_DATA_TYPES = ["geojson", "route"] as const;
+            (manifest.localData as unknown as Record<string, unknown>[]).forEach((entry, idx) => {
+                const prefix = `localData[${idx}]`;
+
+                // name must be a non-empty string
+                if (typeof entry.name !== "string" || !(entry.name as string).trim()) {
+                    errors.push(`${prefix}: name must be a non-empty string`);
+                }
+
+                // type must be one of the allowed literals
+                if (!VALID_LOCAL_DATA_TYPES.includes(entry.type as typeof VALID_LOCAL_DATA_TYPES[number])) {
+                    errors.push(
+                        `${prefix}: type "${String(entry.type)}" is invalid; must be one of: ${VALID_LOCAL_DATA_TYPES.join(", ")}`,
+                    );
+                }
+
+                // path must be a string starting with "/" and must not contain ".." (T-30-01)
+                if (typeof entry.path !== "string" || !(entry.path as string).startsWith("/")) {
+                    errors.push(`${prefix}: path must be a string starting with "/"`);
+                } else if ((entry.path as string).includes("..")) {
+                    errors.push(`${prefix}: path must not contain ".." (traversal rejected)`);
+                }
+            });
         }
     }
 

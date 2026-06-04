@@ -15,7 +15,6 @@ export function BottomPanelManager() {
 
     const [mountedPanel, setMountedPanel] = useState<string | null>(activeBottomPanel);
 
-    const [isDragging, setIsDragging] = useState(false);
     const resizeRef = useRef<HTMLDivElement>(null);
 
     // Get all registered plugins that provide a bottom panel component
@@ -25,6 +24,7 @@ export function BottomPanelManager() {
     );
 
     const isCoveredRef = useRef(false);
+    const isDraggingRef = useRef(false);
 
     useEffect(() => {
         if (activeBottomPanel) {
@@ -39,36 +39,29 @@ export function BottomPanelManager() {
         }
     }, [activeBottomPanel]);
 
-    // Handle mouse drag for resizing the panel
-    useEffect(() => {
-        if (!isDragging) {
-            document.body.classList.remove("is-dragging-bottom-panel");
-            return;
-        }
-
+    // Pointer-capture drag handlers — attached directly to the resize handle element.
+    // setPointerCapture ensures pointermove/pointerup are delivered to the element even
+    // when the pointer leaves its bounds (required for fast real-user drags and Playwright).
+    // isDraggingRef guards the move handler instead of hasPointerCapture, which has
+    // inconsistent behaviour across webkit versions in CI for repeated drag sequences.
+    const handleResizePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        isDraggingRef.current = true;
         document.body.classList.add("is-dragging-bottom-panel");
+    };
 
-        const handleMouseMove = (e: MouseEvent) => {
-            // Calculate new height based on distance from bottom of window
-            const newHeight = window.innerHeight - e.clientY;
-            // Clamp between min 120px and max window height - 100px
-            const clampedHeight = Math.max(120, Math.min(newHeight, window.innerHeight - 100));
-            setBottomPanelHeight(clampedHeight);
-        };
+    const handleResizePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (!isDraggingRef.current) return;
+        const newHeight = window.innerHeight - e.clientY;
+        const clampedHeight = Math.max(120, Math.min(newHeight, window.innerHeight - 100));
+        setBottomPanelHeight(clampedHeight);
+    };
 
-        const handleMouseUp = () => {
-            setIsDragging(false);
-        };
-
-        window.addEventListener("mousemove", handleMouseMove);
-        window.addEventListener("mouseup", handleMouseUp);
-        
-        return () => {
-            window.removeEventListener("mousemove", handleMouseMove);
-            window.removeEventListener("mouseup", handleMouseUp);
-            document.body.classList.remove("is-dragging-bottom-panel");
-        };
-    }, [isDragging, setBottomPanelHeight]);
+    const handleResizePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+        isDraggingRef.current = false;
+        document.body.classList.remove("is-dragging-bottom-panel");
+    };
 
     // Dynamically push sidebars up based on bottom panel height
     useEffect(() => {
@@ -177,11 +170,14 @@ export function BottomPanelManager() {
             >
                 {mountedPanel && (
                     <>
-                        <div 
-                            className="bottom-panel-resize-handle" 
+                        <div
+                            className="bottom-panel-resize-handle"
                             data-testid="bottom-panel-resize-handle"
                             ref={resizeRef}
-                            onMouseDown={() => setIsDragging(true)}
+                            onPointerDown={handleResizePointerDown}
+                            onPointerMove={handleResizePointerMove}
+                            onPointerUp={handleResizePointerUp}
+                            onPointerCancel={handleResizePointerUp}
                         >
                             <div className="resize-grip" />
                         </div>

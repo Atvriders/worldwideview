@@ -1,6 +1,10 @@
 ---
-trigger: model_decision
 description: The standard operating procedure for instantiating, modifying, and registering a new data source plugin within the engine.
+paths:
+  - "src/core/plugins/**/*"
+  - "packages/wwv-plugin-*/src/**/*"
+  - "local-plugins/**/*"
+  - "packages/wwv-plugin-sdk/src/**/*"
 ---
 
 # Plugin Architecture & Data Flow
@@ -16,6 +20,76 @@ A valid plugin class MUST provide:
 2. `fetch(timeRange)` method logic.
 3. `renderEntity(GeoEntity)` to determine visual style.
 4. `getPollingInterval()` (defaults fallback securely to standard store config).
+
+## Plugin Data Delivery Types
+
+Plugins receive entity data in one of three modes. Choose the right mode before writing code — mixing them causes silent data loss.
+
+| Mode | `getPollingInterval()` | `fetch()` | `mapWebsocketPayload()` | When to use |
+|---|---|---|---|---|
+| **REST-only** | `> 0` (ms) | Returns `GeoEntity[]` | Not needed | Static or slow-changing data (< every 30s). No seeder required. |
+| **WebSocket-only** | `0` | Return `[]` immediately | **Required** if seeder sends object payload | Live-streaming data from a seeder (satellites, AIS, flights) |
+| **Hybrid** | `> 0` | Returns initial snapshot | **Required** if seeder sends object payload | Needs both immediate data on load AND live updates |
+
+### WebSocket-Only Pattern (most live-data plugins)
+
+```typescript
+getPollingInterval(): number {
+    return 0; // WS-only — do NOT call REST on enable
+}
+
+async fetch(_timeRange: TimeRange): Promise<GeoEntity[]> {
+    return []; // Initial data arrives via mapWebsocketPayload within seconds
+}
+
+mapWebsocketPayload(payload: any, _existingEntities: GeoEntity[]): GeoEntity[] {
+    // Transform raw engine payload → GeoEntity[]
+    // payload shape depends on what the seeder calls setLiveSnapshot() with
+    const items = payload?.items ?? (Array.isArray(payload) ? payload : []);
+    return items.map((item: any): GeoEntity => ({
+        id: `my-plugin-${item.id}`,
+        pluginId: "my-plugin",
+        latitude: item.lat,
+        longitude: item.lon,
+        altitude: item.alt ?? 0,
+        timestamp: new Date(),
+        label: item.name,
+        properties: item,
+    }));
+}
+```
+
+> [!WARNING]
+> If `getPollingInterval()` returns `0` but the seeder sends an object payload, you **MUST** implement `mapWebsocketPayload`. Without it, `WsClient` drops the data silently. See `data-engine-architecture.md §7` for the exact rule.
+
+### `mapWebsocketPayload` Signature
+
+```typescript
+mapWebsocketPayload(payload: any, existingEntities: GeoEntity[]): GeoEntity[]
+```
+
+- `payload` — raw value from `setLiveSnapshot()` in the seeder (whatever shape the seeder stores)
+- `existingEntities` — current entities in the store for this plugin (use for incremental updates)
+- Must return a **complete replacement** `GeoEntity[]` (not a diff)
+
+### Property Tag Helpers
+
+Always wrap typed property values with the SDK helpers so the Intel panel renders them richly:
+
+```ts
+import { dtProp, urlProp, imageProp, videoProp } from "@worldwideview/wwv-plugin-sdk";
+
+properties: {
+    updated: dtProp(item.updated_at ?? null),   // renders as expandable datetime row
+    source:  urlProp(item.source_url ?? null),   // renders as clickable link
+    preview: imageProp(item.image ?? null),      // renders as inline thumbnail
+    stream:  videoProp(item.video_url ?? null),  // renders as "Watch" link
+}
+```
+
+All helpers are null-safe and return `null` for empty input. Plain string/number values that don't need rich rendering need no wrapper.
+
+---
 
 ## Plugin Architectures (Manifest Formats)
 
@@ -52,6 +126,33 @@ All plugins MUST define their identity and compatibility via a `"worldwideview"`
 }
 ```
 
+### `peerDependencies` Rule for npm-Published Plugins
+
+Plugins published to npm **MUST** declare the following as `peerDependencies`, not `dependencies`:
+
+```json
+{
+  "peerDependencies": {
+    "@worldwideview/wwv-plugin-sdk": "*",
+    "react": ">=19",
+    "lucide-react": "*"
+  }
+}
+```
+
+Also peer (never bundle): `react-dom`, `cesium`, `resium`, `zustand`.
+
+Bundling these causes multiple React instances in the host app, breaking hooks (`Invalid hook call` at runtime).
+
+### File Extension Rule
+
+- Files containing **JSX** (any `<Component />` syntax, `return (<div>...)`) → must use `.tsx`
+- Files with no JSX (pure TypeScript, even importing React types) → use `.ts`
+
+This is enforced by the TypeScript compiler. A `.ts` file with JSX will fail to build.
+
+---
+
 ## The Registration Pipeline
 
 > [!NOTE]
@@ -78,9 +179,9 @@ DataBus.getInstance().emit('dataUpdated', {
 });
 ```
 
-## Local Plugin Development (Sandbox)
+## Local Plugin Development
 
-To rapidly iterate on plugins without polluting the core monorepo `packages/` directory or git history, use the local devkit:
+`local-plugins/` is a **git clone of the canonical community plugin repo** (`github.com/silvertakana/wwv-plugins`), gitignored from the main `worldwideview` repo. It has its own remote — commits and pushes go upstream to that public repo, not to `worldwideview`. Run `cd local-plugins && git pull` before working to get the latest community plugins.
 
 1. **Create**: Run `node packages/wwv-cli/dist/index.js create <name> --local` to scaffold a full plugin structure inside the `local-plugins/` directory.
 2. **Develop**: Running `pnpm dev` or `pnpm dev:all` automatically spawns the `dev:plugins` watcher. Any changes made to plugins in `local-plugins/` will be instantly rebuilt using Vite (externalizing large globals) and synced to `public/plugins-local/` for hot-reloading.
@@ -208,7 +309,7 @@ When implementing the `token-exchange` flow or communicating across domains, all
 Starting in 2026, WorldWideView adopted the **Architect and Toolbox** paradigm using NPM global tools, ensuring a fully decoupled developer experience. Plugin repositories contain *pure code* with absolutely no platform hosting boilerplate (e.g. no embedded docker-compose files).
 
 ### The Developer Experience
-1. **Scaffold**: `node packages/wwv-cli/dist/index.js create <name> --local` (Creates sandbox inside `local-plugins/`)
+1. **Scaffold**: `node packages/wwv-cli/dist/index.js create <name> --local` (Creates plugin inside `local-plugins/` — the community plugin repo clone)
 2. **Install**: `pnpm install` (Links dependencies via workspace)
 3. **Develop**: `pnpm dev:all` (Starts frontend, data engine, and plugin watcher dynamically)
 
@@ -391,13 +492,107 @@ While avoiding monolithic coupling, WWV plans to implement the following high-UX
 
 ## Local Plugins & Seeders
 
-### 1. Local Sandbox Workflow
+### 1. Local Plugin Workflow (`local-plugins/` — community plugin repo clone)
+`local-plugins/` is a git clone of `github.com/silvertakana/wwv-plugins` with its own remote. Pull latest before starting: `cd local-plugins && git pull`.
 - **Scaffold**: `node packages/wwv-cli/dist/index.js create` (creates inside `local-plugins/wwv-plugin-<name>` by default, or `packages/` if `--core` is used).
 - **Develop**: `pnpm dev` triggers hot-reloading via `dev:plugins` watch script.
-- **Publish**: `node packages/wwv-cli/dist/index.js publish <name> [--org <your-org>]` publishes the plugin from the project root. (No linking is needed; the sandbox natively functions in the workspace).
+- **Publish**: `node packages/wwv-cli/dist/index.js publish <name> [--org <your-org>]` publishes the plugin from the project root. Commit and push from inside `local-plugins/` to contribute back to the community repo.
 
 ### 2. Data Engine Seeders
 Seeders in `wwv-data-engine/src/seeders/` provide the backend data.
 - **Cron Seeder**: Uses `registerSeeder({ name: "plugin-id", cron: "..." })` and pushes to Redis via `setLiveSnapshot()`.
 - **Init Seeder**: High-frequency or persistent websockets via `init: () => void`.
 - **Constraint**: Seeder `name` MUST exactly match the frontend plugin `id`. Do not bundle workspace dependencies like `ws` or `zod` into the seeder `dist`.
+
+---
+
+## Plugin Bundle Footguns
+
+### 1. CSP blocks CDN stylesheets -- use `?inline` + `<style>` injection
+
+The host app's `style-src` policy includes `'unsafe-inline'` but does **not** include external CDN origins like `unpkg.com` or `cdn.jsdelivr.net`. Any plugin that loads CSS via a runtime `<link href="https://unpkg.com/...">` will have that stylesheet **silently blocked** by the browser -- no console error, just broken styling and broken layout (elements fall back to `position: static`).
+
+**Wrong:**
+```typescript
+// In useEffect:
+link.href = "https://unpkg.com/gridstack@11/dist/gridstack.min.css";
+document.head.appendChild(link);
+```
+
+**Correct -- bundle CSS as inline string and inject via `<style>` tag:**
+```typescript
+import gridstackCSS from "gridstack/dist/gridstack.min.css?inline";
+
+// In useEffect:
+const style = document.createElement("style");
+style.textContent = gridstackCSS;
+document.head.appendChild(style);
+```
+
+Vite's `?inline` suffix imports CSS as a plain string. The `<style>` tag is allowed by `'unsafe-inline'`. This is the only CSP-safe pattern for third-party CSS in plugin bundles.
+
+---
+
+### 2. `inlineDynamicImports: true` -- not `codeSplitting: false`
+
+`codeSplitting: false` is **not a valid Rollup option**. It is silently ignored, and Rollup will still produce code-split chunks. The host can only load a single `frontend.mjs` -- any sibling chunk (e.g. `gridstack-XXXXX.js`) will 404.
+
+**Wrong:**
+```js
+rollupOptions: {
+  output: { codeSplitting: false }  // silently ignored
+}
+```
+
+**Correct:**
+```js
+rollupOptions: {
+  output: { inlineDynamicImports: true }  // prevents all code splitting
+}
+```
+
+Both `vite.config.ts` (for manual `pnpm build`) and `scripts/sync-local-plugins.mjs` must use `inlineDynamicImports: true`.
+
+---
+
+### 3. `process.env.NODE_ENV` in CJS deps -- needs inline Rollup transform, not Vite `define`
+
+CJS dependencies like `recharts`, `prop-types`, and `react-is` reference `process.env.NODE_ENV` inside their CommonJS module body. Vite's top-level `define: { 'process.env.NODE_ENV': '"production"' }` does NOT reach inside Rollup's `__commonJSMin()` wrappers -- those run after the `define` substitution phase.
+
+**Wrong:**
+```js
+// In vite.config.ts or sync-local-plugins.mjs:
+define: { 'process.env.NODE_ENV': '"production"' }  // doesn't reach CJS wrappers
+```
+
+**Correct -- add an inline Rollup transform plugin inside `rollupOptions.plugins`:**
+```js
+rollupOptions: {
+  plugins: [
+    {
+      name: 'replace-process-env',
+      transform(code) {
+        if (!code.includes('process.env.NODE_ENV')) return null;
+        return {
+          code: code.replace(/process\.env\.NODE_ENV/g, '"production"'),
+          map: null,
+        };
+      },
+    },
+    // ... other plugins
+  ]
+}
+```
+
+This plugin runs on each module source before Rollup wraps it, so it correctly replaces `process.env.NODE_ENV` in CJS sub-dependencies.
+
+---
+
+### 4. Yahoo Finance and third-party data APIs -- CORS from the browser
+
+Yahoo Finance's chart API (`query1.finance.yahoo.com`) does **not** return `Access-Control-Allow-Origin` headers. Direct `fetch()` from a plugin bundle running in the browser will be CORS-blocked.
+
+**Architectural preference (in order):**
+1. **Best:** Have the wwv-data-engine seeder fetch the data server-side and stream it to the plugin via WebSocket -- no CORS issue.
+2. **Acceptable stopgap:** Use `corsproxy.io` relay: `fetch('https://corsproxy.io/?url=' + encodeURIComponent(apiUrl))`. This adds a third-party relay dependency.
+3. **Do not do:** Assume browser `fetch()` to third-party financial APIs will work -- most do not send CORS headers.

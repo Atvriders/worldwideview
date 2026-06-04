@@ -14,9 +14,14 @@ model User {
   name           String
   hashedPassword String
   role           String            @default("user")
+  // Bumping this invalidates all of the user's existing JWT sessions.
+  // The JWT embeds the value at sign-in; the auth jwt callback rejects any
+  // token whose value no longer matches the DB (logout-everywhere / revoke).
+  sessionVersion Int               @default(0)
   createdAt      DateTime          @default(now())
   favorites      Favorite[]
   memberships    WorkspaceMember[]
+  apiKeys        UserApiKey[]
 
   @@unique([tenantId, email])
   @@map("users")
@@ -31,6 +36,7 @@ model Favorite {
   pluginName String
   lastSeen   DateTime @default(now())
   userId     String
+  notes      String?
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, entityId])
@@ -101,4 +107,18 @@ model MarketplaceCredential {
 
   @@unique([tenantId])
   @@map("marketplace_credentials")
+}
+
+model UserApiKey {
+  id           String    @id @default(uuid())
+  userId       String
+  tenantId     String?
+  prefix       String    @unique
+  hashedSecret String
+  name         String
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_api_keys")
 }

@@ -6,6 +6,7 @@ import { GET as connectRoute } from "./connect/route";
 import { GET as callbackRoute } from "./callback/route";
 
 vi.mock("openid-client", () => ({
+    Configuration: vi.fn().mockImplementation(function(this: object) { return this; }),
     randomState: vi.fn(() => "mock-state"),
     randomPKCECodeVerifier: vi.fn(() => "mock-verifier"),
     calculatePKCECodeChallenge: vi.fn(() => "mock-challenge"),
@@ -55,7 +56,7 @@ describe("PKCE Flow", () => {
             expect(cookies).toContain("HttpOnly");
             expect(cookies).toContain("Secure");
             expect(cookies).toContain("SameSite=lax");
-            expect(cookies).toContain("Path=/api/marketplace/callback");
+            expect(cookies).toContain("Path=/"); // __Host- prefix requires Path=/ per RFC 6265bis
             // Check __Host- prefix if in production (assuming https testing context)
             expect(cookies).toMatch(/__Host-pkce_verifier/);
         });

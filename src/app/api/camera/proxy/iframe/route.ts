@@ -3,8 +3,21 @@ import { auth } from "@/lib/auth";
 import { isAuthEnabled } from "@/core/edition";
 import { cameraProxyLimiter } from "@/lib/rateLimiters";
 import { getClientIp } from "@/lib/rateLimit";
+import { safeFetch } from "@/lib/security/ssrf";
 
 const MAX_IFRAME_DURATION_MS = 10 * 1000; // 10 seconds timeout for HTML
+
+/**
+ * Escape a string for safe inclusion in an HTML attribute value.
+ */
+function escapeHtmlAttr(s: string): string {
+    return s
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#x27;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
 
 /**
  * Proxy for iframe HTML pages.
@@ -28,13 +41,14 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const upstream = await fetch(targetUrl, {
+        const upstream = await safeFetch(targetUrl, {
             headers: {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.5",
             },
-            signal: AbortSignal.timeout(MAX_IFRAME_DURATION_MS),
+            maxSize: 5 * 1024 * 1024,
+            timeout: MAX_IFRAME_DURATION_MS,
         });
 
         if (!upstream.ok) {
@@ -53,7 +67,6 @@ export async function GET(req: NextRequest) {
                 headers: {
                     "Content-Type": contentType,
                     "Cache-Control": "no-store",
-                    "Access-Control-Allow-Origin": "*",
                 },
             });
         }
@@ -61,7 +74,8 @@ export async function GET(req: NextRequest) {
         let html = await upstream.text();
 
         // Inject <base href="..."> right after <head> or at the very beginning of the document
-        const baseTag = `<base href="${targetUrl}">\n`;
+        const escapedUrl = escapeHtmlAttr(targetUrl);
+        const baseTag = `<base href="${escapedUrl}">\n`;
         if (html.includes("<head>")) {
             html = html.replace("<head>", `<head>\n${baseTag}`);
         } else if (html.includes("<HEAD>")) {
@@ -76,8 +90,6 @@ export async function GET(req: NextRequest) {
                 "Content-Type": contentType,
                 "Cache-Control": "no-store",
                 "X-Content-Type-Options": "nosniff",
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, OPTIONS",
             },
         });
     } catch (error: unknown) {
@@ -88,16 +100,4 @@ export async function GET(req: NextRequest) {
             { status: 502 },
         );
     }
-}
-
-export async function OPTIONS() {
-    return new Response(null, {
-        status: 204,
-        headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
-            "Access-Control-Max-Age": "86400",
-        },
-    });
 }

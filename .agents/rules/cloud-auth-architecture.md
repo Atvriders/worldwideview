@@ -1,7 +1,15 @@
 ---
-trigger: model_decision
 description: Cloud edition implementation details, PostgreSQL Row-Level Security (RLS) isolation, cross-subdomain auth, and cryptographic license keys.
+paths:
+  - "src/lib/auth*"
+  - "src/app/api/auth/**/*"
+  - "src/core/auth.ts"
+  - "src/core/storage.ts"
+  - "src/core/tenant.ts"
 ---
+
+> **SUPERSEDED by ADR-003** (`docs/architecture/decisions/adr-0003-shared-identity-and-ecosystem-auth-host.md`).
+> The auth host is `worldwideview.dev` (worldwideview-web repo), not `app.worldwideview.dev`. Read ADR-003 first.
 
 # WorldWideView — Cloud & Auth Architecture
 
@@ -14,25 +22,16 @@ description: Cloud edition implementation details, PostgreSQL Row-Level Security
 
 ## Auth Strategy
 
-**Auth.js (NextAuth)** is the single auth API across all editions. `app.worldwideview.dev` owns **all auth UI** — login, registration, password reset. No other subdomain ever shows a login or registration form.
-
-```typescript
-// src/lib/auth.ts
-const providers = isCloud
-  ? [SupabaseProvider({ /* delegates to Supabase Auth (GoTrue) */ })]
-  : [Credentials({ /* local bcrypt + PostgreSQL */ })];
-
-export const { auth, signIn, signOut } = NextAuth({ providers });
-```
-
-Application code is **identical** across editions — always calls `auth()`, `signIn()`, `signOut()`.
-
-**One account for the entire ecosystem:**
-- Cloud instance (`[user].app.worldwideview.dev`)
-- Marketplace (browse, install, publish) — via SSO redirect
-- Local instance Bridge API connection
-
-**Marketplace never owns auth UI** — it redirects to `app.worldwideview.dev/login?redirect_to=marketplace...` for all sign-in.
+> [!NOTE]
+> **See [ADR-003](../../docs/architecture/decisions/adr-0003-shared-identity-and-ecosystem-auth-host.md) for the canonical auth architecture.**
+> The implementation described below (NextAuth as ecosystem IdP, `app.worldwideview.dev` as auth host) was superseded on 2026-05-22. Phase 2A-D (completed 2026-05-25) implemented the ADR-003 architecture:
+> - **Supabase Auth** is the identity provider for the cloud edition
+> - **`worldwideview.dev`** owns login, signup, and auth callback routes (`/login`, `/signup`, `/auth/callback`)
+> - **NextAuth** (Credentials provider) remains active for the local and demo editions only
+> - Session cookies use `@supabase/ssr` `createServerClient` scoped to `NEXT_PUBLIC_WWV_COOKIE_DOMAIN`
+> - Both worldwideview and worldwideview-marketplace use the same `buildCookieOptions()` recipe
+>
+> The multi-tenant RLS, tier matrix, license key, and CI/CD sections below remain valid.
 
 ---
 
