@@ -7,10 +7,9 @@
 // fine in CI. Do NOT copy this pattern into real seeders.
 
 const pluginId = process.env.STUB_PLUGIN_ID;
-if (!pluginId) {
-  console.error("[stub-seeder] STUB_PLUGIN_ID env var is required");
-  process.exit(1);
-}
+// When unconfigured (e.g. seeder-CI, where this stub is baked into the shared
+// :ci image but unused), export a nameless module so the seeder-loader skips
+// it instead of crashing the engine.
 
 function makeEntities() {
   const now = new Date().toISOString();
@@ -38,13 +37,14 @@ function makeEntities() {
   ];
 }
 
-export default {
-  name: pluginId,
-  // Run immediately and every 10s — CI doesn't wait for cron schedules
-  cron: "*/10 * * * * *",
-  fn: async (ctx) => {
-    const entities = makeEntities();
-    await ctx.setLiveSnapshot(pluginId, entities, 300);
-    console.log(`[stub-seeder] emitted ${entities.length} entities for ${pluginId}`);
-  },
-};
+export default pluginId
+  ? {
+      name: pluginId,
+      cron: "*/10 * * * * *",
+      fn: async (ctx) => {
+        const entities = makeEntities();
+        await ctx.setLiveSnapshot(pluginId, entities, 300);
+        console.log(`[stub-seeder] emitted ${entities.length} entities for ${pluginId}`);
+      },
+    }
+  : {};

@@ -31,7 +31,11 @@ export async function probeWs(opts: {
     }, opts.timeoutMs);
 
     ws.on("open", () => {
-      console.log(`[ws] connected to ${opts.wsUrl}, waiting for pluginId="${opts.name}"`);
+      // The engine is subscribe-required: it only broadcasts a plugin's data to
+      // connections that have subscribed to it (websocket.ts broadcastPluginData).
+      // Auth is bypassed in CI via WWV_SKIP_WS_AUTH=true, so no auth frame is sent.
+      ws.send(JSON.stringify({ action: "subscribe", pluginId: opts.name }));
+      console.log(`[ws] connected to ${opts.wsUrl}, subscribed to pluginId="${opts.name}"`);
     });
 
     ws.on("message", (raw) => {

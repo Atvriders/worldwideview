@@ -69,6 +69,8 @@ services:
       DB_PATH: /tmp/engine.db
       # Stub seeder reads the target plugin id from this env var
       STUB_PLUGIN_ID: ${PLUGIN_ID}
+      WWV_SKIP_WS_AUTH: "true"
+      NODE_ENV: ci
     volumes:
       # Mount only the stub seeder — no other seeders to avoid contamination
       - ./stub-seeder:/app/seeders/community/stub-seeder:ro
