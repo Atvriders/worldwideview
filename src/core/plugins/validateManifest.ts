@@ -86,25 +86,41 @@ export function validateManifest(
         errors.push("Missing required field: entry");
     } else {
         const entry = manifest.entry.trim();
-        const isRelative = entry.startsWith("/") || entry.startsWith("./");
-        const isLocal = entry.startsWith("http://localhost") || entry.startsWith("http://127.0.0.1");
-        const isWWV = entry.includes(".worldwideview.dev");
-        const isCDN = entry.startsWith("https://cdn.jsdelivr.net") || entry.startsWith("https://unpkg.com");
+        // A relative path starts with "/" or "./". Reject protocol-relative
+        // ("//host") and slash-backslash ("/\\host") forms: they start with "/"
+        // but resolve to an EXTERNAL origin when import()-ed.
+        const isRelative =
+            entry.startsWith("./") ||
+            (entry.startsWith("/") && entry[1] !== "/" && entry[1] !== "\\");
 
-        // Accept bundles served from a configured marketplace/instance host
-        // (e.g. marketplace.wwv.local) derived from env, so custom deployment
-        // hostnames work without being hardcoded.
-        let isConfiguredHost = false;
-        if (ENV_ALLOWED_ENTRY_HOSTS.size > 0) {
+        // Absolute entry URLs are host-matched against an allowlist using the
+        // PARSED hostname. Substring checks on the raw string (includes /
+        // startsWith) are bypassable, e.g. "https://unpkg.com.evil.com/x.mjs"
+        // or "https://sub.worldwideview.dev.evil.com/x.mjs", which would let an
+        // attacker-controlled origin serve the dynamically imported bundle (RCE).
+        let isAllowedHost = false;
+        if (!isRelative) {
             try {
-                isConfiguredHost = ENV_ALLOWED_ENTRY_HOSTS.has(new URL(entry).hostname);
+                const url = new URL(entry);
+                const host = url.hostname;
+                const isSecure = url.protocol === "https:";
+                const isLocalhost =
+                    (url.protocol === "http:" || isSecure) &&
+                    (host === "localhost" || host === "127.0.0.1" || host === "[::1]");
+                const isWWV =
+                    isSecure &&
+                    (host === "worldwideview.dev" || host.endsWith(".worldwideview.dev"));
+                const isCDN = isSecure && (host === "cdn.jsdelivr.net" || host === "unpkg.com");
+                // Operator-configured hosts (from NEXT_PUBLIC_*MARKETPLACE_URL) are an
+                // explicit deployment opt-in, so their protocol is trusted as set.
+                const isConfiguredHost = ENV_ALLOWED_ENTRY_HOSTS.has(host);
+                isAllowedHost = isLocalhost || isWWV || isCDN || isConfiguredHost;
             } catch {
-                // Relative paths and other non-absolute entries aren't parseable
-                // as full URLs — they're already covered by `isRelative`.
+                // Not a parseable absolute URL and not relative: rejected below.
             }
         }
 
-        if (!isRelative && !isLocal && !isWWV && !isCDN && !isConfiguredHost) {
+        if (!isRelative && !isAllowedHost) {
             errors.push("entry URL must be a relative path, CDN, localhost, or worldwideview.dev domain");
         }
     }

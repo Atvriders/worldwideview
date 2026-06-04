@@ -375,3 +375,53 @@ describe("validateManifest no execution field required (MAN-04)", () => {
         expect(hasExecutionError).toBe(false);
     });
 });
+
+// ---------------------------------------------------------------------------
+// SEC-URL: entry URL allowlist must host-match the PARSED hostname.
+// Substring checks (includes / startsWith on the raw string) are bypassable
+// and would allow an attacker-controlled origin to serve the imported bundle.
+// ---------------------------------------------------------------------------
+
+describe("validateManifest entry URL allowlist (security)", () => {
+    const ERR =
+        "entry URL must be a relative path, CDN, localhost, or worldwideview.dev domain";
+
+    const accepts = (entry: string) => {
+        const result = validateManifest(baseManifest({ entry }));
+        expect(result.errors, `expected "${entry}" to be accepted`).not.toContain(ERR);
+    };
+    const rejects = (entry: string) => {
+        const result = validateManifest(baseManifest({ entry }));
+        expect(result.errors, `expected "${entry}" to be rejected`).toContain(ERR);
+    };
+
+    it("accepts relative and exact known-host absolute entries", () => {
+        accepts("/plugins/test/frontend.mjs");
+        accepts("./frontend.mjs");
+        accepts("https://unpkg.com/@wwv/plugin/frontend.mjs");
+        accepts("https://cdn.jsdelivr.net/npm/@wwv/plugin/frontend.mjs");
+        accepts("https://marketplace.worldwideview.dev/p/frontend.mjs");
+        accepts("https://worldwideview.dev/p/frontend.mjs");
+        accepts("http://localhost:3000/plugins/x/frontend.mjs");
+        accepts("http://127.0.0.1:5000/plugins/x/frontend.mjs");
+        accepts("http://[::1]:5000/plugins/x/frontend.mjs");
+    });
+
+    it("rejects substring-bypass hostnames the old check allowed", () => {
+        rejects("https://unpkg.com.evil.com/frontend.mjs");
+        rejects("https://cdn.jsdelivr.net.evil.com/frontend.mjs");
+        rejects("https://sub.worldwideview.dev.evil.com/frontend.mjs");
+        rejects("https://evil.com/#.worldwideview.dev");
+        rejects("https://evil.com/?x=.worldwideview.dev");
+        rejects("http://localhost.evil.com/frontend.mjs");
+        rejects("https://hacker.com/malicious.js");
+    });
+
+    it("rejects protocol-relative, slash-backslash, userinfo and non-http(s) scheme tricks", () => {
+        rejects("//evil.com/frontend.mjs");
+        rejects("/\\evil.com/frontend.mjs");
+        rejects("https://unpkg.com@evil.com/frontend.mjs");
+        rejects("javascript:alert(1)");
+        rejects("data:text/javascript,alert(1)");
+    });
+});
