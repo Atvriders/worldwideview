@@ -7,8 +7,9 @@ services:
   wwv:
     image: ghcr.io/atvriders/worldwideview:latest
     ports:
-      # Host port is overridable (e.g. WWV_HTTP_PORT=3015) to avoid host conflicts on 3000.
-      - "${WWV_HTTP_PORT:-3000}:3000"
+      # host:container. Host port defaults to 3015 (avoids the common :3000 conflict);
+      # override with WWV_HTTP_PORT. The container always listens on 3000.
+      - "${WWV_HTTP_PORT:-3015}:3000"
     volumes:
       - wwv-data:/app/data
       - ./public/plugins-local:/app/public/plugins-local:ro

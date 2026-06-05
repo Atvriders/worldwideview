@@ -12,7 +12,7 @@ Turnkey local bring-up of the full stack: **Next.js app + Postgres + data-engine
 ./setup-local.sh                              # one-time: writes .env, stages seeders, mkdir mounts
 docker compose --profile engine up --build    # builds + starts the full stack
 ```
-That's it. Then open **http://localhost:3000**.
+That's it. Then open **http://localhost:3015**.
 
 > ⚠️ The live data (engine + redis) is behind the **`engine` compose profile**. A plain
 > `docker compose up` (without `--profile engine`) starts only the app + DB → an **empty globe**.
@@ -28,7 +28,7 @@ That's it. Then open **http://localhost:3000**.
 
 ## Verify it's working
 ```bash
-curl -s localhost:3000/api/health        # app health
+curl -s localhost:3015/api/health        # app health
 curl -s localhost:5000/health            # engine + per-seeder last-run
 curl -s localhost:5000/manifest          # should list 14 seeders (earthquakes, satellite, wildfires, ...)
 ```
