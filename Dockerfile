@@ -115,7 +115,6 @@ COPY --from=builder /app/prod/node_modules ./node_modules
 # Copy static assets that standalone mode does NOT include
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/scripts/https-proxy.mjs ./scripts/https-proxy.mjs
 
 # Build stamp — read by /api/build at runtime.
 COPY --from=builder /app/.build-id ./.build-id
@@ -126,7 +125,7 @@ COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN sed -i 's/\r$//' ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
-EXPOSE 3000 3001
+EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
