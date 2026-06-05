@@ -96,7 +96,7 @@ export function wwvPluginGlobals(): any {
                 return `
                     const SDK = globalThis.__WWV_HOST__.WWVPluginSDK;
                     export default SDK;
-                    export const { WorldPlugin, PluginManifest, createSvgIconUrl, DEFAULT_ICON_SIZE } = SDK;
+                    export const { WorldPlugin, PluginManifest, createSvgIconUrl, DEFAULT_ICON_SIZE, dtProp, urlProp, imageProp, videoProp } = SDK;
                 `;
             }
             if (originalId === "zustand") {
