@@ -4,6 +4,7 @@ name: Docker Image CI
 # Doc/agent-rules/test-only changes skip the expensive multi-stage build.
 # Skipped workflow runs satisfy GitHub required status checks (neutral pass).
 on:
+  workflow_dispatch: {}
   push:
     branches: [ "main" ]
     paths:
