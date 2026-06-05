@@ -37,6 +37,11 @@ env:
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
+    # Hardening: workflow_dispatch has no native branch filter, so a manual run could
+    # otherwise consume secrets + packages:write and push to GHCR from any branch.
+    # Only allow a *dispatched* run on the trusted default branch. The push/pull_request
+    # triggers above are already branch-scoped to main (PRs build with push:false).
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
     permissions:
       contents: read
       packages: write
