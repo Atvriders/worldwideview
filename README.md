@@ -80,6 +80,27 @@ Before running the application, ensure you have the following installed:
 - [Docker](https://www.docker.com/) (for self-hosting or full local dev)
 - PostgreSQL (or rely on the `coolify-db` / local compose container)
 
+> [!TIP]
+> For the **Docker Compose** path below, **Docker is the only prerequisite** — Node.js and pnpm are not needed, since the app image is pulled prebuilt from GHCR.
+
+## Quick Start (Docker Compose) — recommended
+
+Run the full stack (Next.js app + Postgres + data engine + Redis + 14 live seeders) with two commands. The `wwv` app image is pulled prebuilt from `ghcr.io/atvriders/worldwideview:latest` (built & published by the **Docker Image CI** workflow) — no local build required.
+
+```bash
+git clone https://github.com/Atvriders/worldwideview.git
+cd worldwideview
+./setup-local.sh                       # one-time: writes .env (fresh secrets), stages the 14 seeders
+docker compose --profile engine up     # pulls the app image + starts everything
+```
+
+Then open **http://localhost:3000**. The globe populates with live data within ~1 minute as each seeder's first fetch lands.
+
+- **Always pass `--profile engine`** — the live data services (`wwv-data-engine` + `wwv-redis`) are behind that profile; without it you get an empty globe.
+- **No API keys required:** base imagery (keyless Google XYZ → Cesium Ion → OpenStreetMap fallback) and all keyless seeders work out of the box.
+- `NEXT_PUBLIC_*` values are baked into the published image at CI build time (`edition=local`, no keys). To use your own Cesium/Google keys, rebuild the image (GitHub Actions → GHCR) or run the `pnpm` dev path below.
+- Full details — verification, optional keys (Cesium Ion / Google / AISStream / OTX), and troubleshooting — are in **[START.md](START.md)**.
+
 ## Quick Start (Self-Hosting)
 
 WorldWideView uses a multi-stage Dockerfile designed for standalone output. To deploy instantly on your own server:
